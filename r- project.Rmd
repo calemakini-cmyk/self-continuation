@@ -55,6 +55,10 @@ library(e1071)
 library(caret)
 library(Metrics)
 library(xgboost)
+library(randomForest)
+library(gbm)
+library(yardstick)
+library(pROC)
 ```
 # INTRODUCTION
 ## 1.1 Background
@@ -877,4 +881,279 @@ No trim (trim = FALSE) — the violins extend to the true min/max, revealing tha
 Non-overlap between categories was expected but not found — this is the most counter-intuitive finding, and it is what pushes the analysis toward multivariate (tree) modelling rather than single-variable rules.
 
 
+# TASK 4: MACHINE LEARNING
+## Load the dataset and inspect the data structure.
+```{r}
+data<-read.csv("credit_clean.csv")
+str(data)
+```
+
+## Split the data into training and testing sets.
+```{r}
+idx   <- createDataPartition(data$is_fraud, p = 0.80, list = FALSE)
+train <- data[ idx, ]
+test  <- data[-idx, ]
+
+cat("Train:", nrow(train), "  Fraud:", sum(train$is_fraud == "fraud"), "\n")
+cat("Test: ", nrow(test),  "  Fraud:", sum(test$is_fraud == "fraud"),  "\n")
+```
+
+# common controrls
+```{r}
+ctrl <- trainControl(
+  method          = "cv",
+  number          = 5,
+  classProbs      = TRUE,
+  summaryFunction = prSummary,          # returns PR-AUC, Precision, Recall, F1
+  savePredictions = "final",
+  sampling        = "up",               # upsample fraud to match legit in each fold
+  allowParallel   = TRUE
+)
+```
+
+# Train at least 5 different machine learning models.
+```{r}
+library(Metrics)
+library(FNN)
+need<-c("")
+# 1 — Logistic Regression (interpretable baseline)
+m_lr <- train(is_fraud ~ ., data = train, method = "glm",
+              family = "binomial", trControl = ctrl, metric = "AUC")
+
+# 2 — Decision Tree (tuned on cp)
+m_dt <- train(is_fraud ~ ., data = train, method = "rpart",
+              trControl = ctrl, metric = "AUC",
+              tuneGrid = expand.grid(cp = c(0.001, 0.01, 0.05)))
+
+# 3 — Random Forest (tuned on mtry)
+m_rf <- train(is_fraud ~ ., data = train, method = "rf",
+              trControl = ctrl, metric = "AUC",
+              tuneGrid = expand.grid(mtry = c(2, 3, 4)),
+              ntree = 300)
+
+# 4 — Gradient Boosting (REPLACES xgboost — reliable in caret)
+m_gbm <- train(is_fraud ~ ., data = train, method = "gbm",
+               trControl = ctrl, metric = "AUC", verbose = FALSE,
+               tuneGrid = expand.grid(
+                 n.trees = c(100, 200), interaction.depth = 3,
+                 shrinkage = 0.1, n.minobsinnode = 10))
+
+# 5 — K-Nearest Neighbours (tuned on k, scaled)
+m_knn <- train(is_fraud ~ ., data = train, method = "knn",
+               trControl = ctrl, metric = "AUC",
+               preProcess = c("center","scale"),
+               tuneGrid = expand.grid(k = c(3, 5, 7)))
+```
+
+# Tune model hyperparameters (use any appropriate method).
+## Decision Tree
+```{r}
+grid_dt <- expand.grid(cp = c(0.0005, 0.001, 0.005, 0.01, 0.02, 0.05, 0.10))
+
+m_dt <- train(is_fraud ~ ., data = train, method = "rpart",
+              trControl = ctrl, metric = "AUC",
+              tuneGrid = grid_dt)
+
+m_dt$bestTune                       # e.g. cp = 0.005
+ggplot(m_dt) + labs(title = "DT: PR-AUC vs cp",
+                    x = "cp", y = "PR-AUC") + theme_minimal()
+```
+
+## Random Forest
+```{r}
+grid_rf <- expand.grid(mtry = c(2, 3, 4, 5))
+
+m_rf <- train(is_fraud ~ ., data = train, method = "rf",
+              trControl = ctrl, metric = "AUC",
+              tuneGrid = grid_rf, ntree = 500)
+
+m_rf$bestTune                       # e.g. mtry = 3
+ggplot(m_rf) + labs(title = "RF: PR-AUC vs mtry",
+                    x = "mtry", y = "PR-AUC") + theme_minimal()
+```
+ 
+## Gradient Boosting
+```{r}
+grid_gbm <- expand.grid(
+  n.trees           = c(100, 200, 400),
+  interaction.depth = c(2, 3),
+  shrinkage         = c(0.05, 0.10, 0.20),
+  n.minobsinnode    = 10
+)
+nrow(grid_gbm)                       # 18 combinations
+
+m_gbm <- train(is_fraud ~ ., data = train, method = "gbm",
+               trControl = ctrl, metric = "AUC", verbose = FALSE,
+               tuneGrid = grid_gbm)
+
+m_gbm$bestTune                       # e.g. 200 trees, depth 3, shr 0.10
+ggplot(m_gbm) +
+  labs(title = "GBM: PR-AUC across n.trees x depth x shrinkage",
+       x = "Boosting iterations", y = "PR-AUC") +
+  theme_minimal()
+```
+
+
+## KNN tune
+```{r}
+grid_knn <- expand.grid(k = c(3, 5, 7, 9, 11, 15))
+
+m_knn <- train(is_fraud ~ ., data = train, method = "knn",
+               trControl = ctrl, metric = "AUC",
+               preProcess = c("center", "scale"),
+               tuneGrid = grid_knn)
+
+m_knn$bestTune                       # e.g. k = 7
+ggplot(m_knn) + labs(title = "KNN: PR-AUC vs k",
+                     x = "k (neighbours)", y = "PR-AUC") + theme_minimal()
+```
+
+# Best Parameters
+```{r}
+best_params <- tibble(
+  Model = c("Logistic Regression", "Decision Tree", "Random Forest",
+            "Gradient Boosting", "KNN"),
+  Grid_size = c(0, 7, 4, 18, 6),
+  Best_hyperparameters = c(
+    "none (baseline)",
+    paste("cp =",     m_dt$bestTune$cp),
+    paste("mtry =",   m_rf$bestTune$mtry, "| ntree = 500"),
+    paste("n.trees =", m_gbm$bestTune$n.trees,
+          "| depth =", m_gbm$bestTune$interaction.depth,
+          "| shrinkage =", m_gbm$bestTune$shrinkage),
+    paste("k =",      m_knn$bestTune$k)
+  )
+)
+
+knitr::kable(best_params,
+             caption = "Table 2. Best hyperparameters per model (5-fold CV, PR-AUC)",
+             format = "pipe")
+```
+
+
+# Evaluate and compare the models using suitable performance metrics.
+```{r}
+models <- list(
+  "Logistic Regression" = m_lr,
+  "Decision Tree"       = m_dt,
+  "Random Forest"       = m_rf,
+  "Gradient Boosting"   = m_gbm,
+  "KNN"                 = m_knn
+)
+
+evaluate <- function(model, name) {
+  prob <- predict(model, test, type = "prob")[["fraud"]]
+  pred <- factor(ifelse(prob >= 0.5, "fraud", "legit"),
+                 levels = c("legit", "fraud"))
+  cm   <- confusionMatrix(pred, test$is_fraud, positive = "fraud")
+
+  roc_auc <- as.numeric(pROC::auc(pROC::roc(
+    test$is_fraud, prob, quiet = TRUE,
+    levels = c("legit", "fraud"), direction = "<")))
+
+  pr_auc <- yardstick::pr_auc_vec(
+    test$is_fraud, prob, event_level = "second")
+
+  tibble(
+    Model       = name,
+    Accuracy    = round(cm$overall["Accuracy"],    3),
+    Precision   = round(cm$byClass["Precision"],   3),
+    Recall      = round(cm$byClass["Sensitivity"], 3),
+    Specificity = round(cm$byClass["Specificity"], 3),
+    F1          = round(cm$byClass["F1"],          3),
+    ROC_AUC     = round(roc_auc, 3),
+    PR_AUC      = round(pr_auc,  3)
+  )
+}
+
+comparison <- purrr::imap_dfr(models, evaluate) |>
+  arrange(desc(PR_AUC))
+
+print(comparison)
+
+knitr::kable(
+  comparison,
+  caption = "Table 3. Model comparison on hold-out test set (n = 1,999; 30 frauds)",
+  col.names = c("Model", "Accuracy", "Precision", "Recall",
+                "Specificity", "F1", "ROC-AUC", "PR-AUC"),
+  align = c("l", "r", "r", "r", "r", "r", "r", "r"),
+  format = "html"
+) |>
+  kableExtra::kable_styling(
+    bootstrap_options = c("striped", "hover"), full_width = FALSE
+  ) |>
+  kableExtra::row_spec(1, bold = TRUE, background = "#e8f5e9")
+```
+
+
+# Present the best performing model and summarize the results.
+```{r}
+best_prob <- predict(m_gbm, test, type = "prob")[["fraud"]]
+best_pred <- factor(ifelse(best_prob >= 0.35, "fraud", "legit"),
+                    levels = c("legit", "fraud"))
+
+cm <- confusionMatrix(best_pred, test$is_fraud, positive = "fraud")
+print(cm$table)
+```
+
+# summary Visuals
+```{r}
+library(patchwork); library(yardstick); library(pROC)
+
+# Panel A — PR curves
+pr_curves <- purrr::imap_dfr(models, function(m, name) {
+  prob <- predict(m, test, type = "prob")[["fraud"]]
+  pr <- yardstick::pr_curve(
+    tibble(truth = test$is_fraud, prob = prob),
+    truth, prob, event_level = "second")
+  pr$Model <- name; pr
+})
+pA <- ggplot(pr_curves, aes(x = recall, y = precision, colour = Model)) +
+  geom_path(size = 1) + labs(title = "A. PR curves", x = "Recall", y = "Precision") +
+  theme_minimal() + theme(legend.position = "bottom", legend.text = element_text(size = 7))
+
+# Panel B — ROC curves
+roc_df <- purrr::imap_dfr(models, function(m, name) {
+  prob <- predict(m, test, type = "prob")[["fraud"]]
+  r <- pROC::roc(test$is_fraud, prob, quiet = TRUE,
+                 levels = c("legit","fraud"), direction = "<")
+  tibble(Model = name,
+         specificity = rev(r$specificities),
+         sensitivity = rev(r$sensitivities))
+})
+pB <- ggplot(roc_df, aes(1 - specificity, sensitivity, colour = Model)) +
+  geom_abline(linetype = "dashed", colour = "grey50") + geom_path(size = 1) +
+  labs(title = "B. ROC curves", x = "FPR", y = "TPR") +
+  theme_minimal() + theme(legend.position = "none")
+
+# Panel C — metric bar chart
+pC <- comparison |>
+  select(Model, PR_AUC, Recall, F1) |>
+  pivot_longer(-Model) |>
+  ggplot(aes(x = reorder(Model, -value), y = value, fill = name)) +
+  geom_col(position = "dodge") +
+  labs(title = "C. Key metrics", x = NULL, y = "Score", fill = NULL) +
+  theme_minimal() + theme(axis.text.x = element_text(angle = 20, hjust = 1)) +
+  coord_flip()
+
+# Panel D — threshold trade-off
+pD <- threshold_tbl |>
+  select(threshold, Precision, Recall, F1) |>
+  pivot_longer(-threshold) |>
+  ggplot(aes(threshold, value, colour = name)) +
+  geom_line(size = 1) + geom_vline(xintercept = 0.35, linetype = "dashed") +
+  labs(title = "D. Threshold trade-off", x = "Threshold", y = "Value", colour = NULL) +
+  theme_minimal() + theme(legend.position = "bottom")
+
+(pA | pB) / (pC | pD) +
+  plot_annotation(title = "Figure E4 - Gradient Boosting results summary",
+                  caption = "Red dotted line = business-optimal threshold (0.35)")
+```
+
+
+# TASK 5: EXPLAINABLE ARTIFICIAL INTELLIGENCE (XAI)
+```{r}
+library(DALEX)
+library(lime)
+```
 
