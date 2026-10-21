@@ -1,0 +1,211 @@
+---
+title: "logistic regression"
+author: "MAKINI CALEB"
+date: "`r Sys.Date()`"
+output: html_document
+---
+ 
+             
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo        = TRUE,          # show the code in HTML
+  tidy        = TRUE,          # run formatR on the code
+  tidy.opts   = list(
+    comment     = FALSE,       # <-- STRIP "#" comments from displayed code
+    blank       = FALSE,       # drop blank lines
+    widthCutoff = 120          # keep long lines readable
+  ),
+  comment     = NA,            # hide the "##" prefix on output
+  warning     = FALSE,
+  message     = FALSE,
+  eval        = TRUE,
+  fig.align   = "center",
+  fig.width   = 10,
+  fig.height  = 6,
+  dpi         = 120,
+  dev         = "png",
+  fig.show    = "asis",
+  fig.keep    = "all",
+  out.width   = "100%"
+)
+                      
+```
+
+# SETTING A WORKING DIRECTORY
+```{r}
+ setwd("C:/Users/ADMIN/OneDrive/Desktop/caleb makini")
+
+```
+
+# loading libraries
+```{r}
+library(tidyverse)
+library(rio)
+library(ggplot2)
+library(psych)
+library(ggthemes)
+library(summarytools)
+library(tidyr)
+library(formatR)
+library(sjmisc)
+library(caret)
+library(report)
+```
+
+# loading data
+```{r}
+data<-read.csv("diabetes.csv")
+head(data)
+```
+
+# general linear models(GLM)
+## logistic regression
+- is a type of regression analysis used for prediction of outcome of a categorical dependant variable based on one or more predictor variables.
+- it is used when the dependant variable is binary(0/1. yes/ no, true /false)
+- it estimates the probability of the dependant variable being 1(or less) given the values of the independent variables
+- The logistic function is used to model the relationship between the dependant and independent variables.
+- the logistic function is defined as:
+
+
+# omit missing values
+```{r}
+omit_miss<-na.omit(data)
+head(omit_miss)
+```
+
+## check columns name
+```{r}
+names(data)
+```
+### convert variables to factor from integer and from character
+```{r}
+data$diabetes<-factor(data$diabetes,
+                      levels=c(0,1),
+                      labels=c("No", "Yes"))
+data$hypertension<-factor(data$hypertension,
+                          levels=c(0,1),
+                      labels=c("No", "Yes") )
+data$heart_disease<-factor(data$heart_disease,
+                          levels=c(0,1),
+                      labels=c("No", "Yes") )
+data$smoking_history<-factor(data$smoking_history)
+
+```
+
+# confirm for missing values
+```{r}
+colSums(is.na(data))
+```
+
+### check the frequency of diabetes case
+```{r}
+
+frq(data, diabetes)
+```
+
+#### visualize the frequency of diabates cases
+```{r}
+ggplot(data, aes(
+  x=diabetes, fill=diabetes
+))+
+  geom_bar(alpha=0.7)+
+  labs(
+    title="Bar plot of diabetes outcome",
+    x="Diabetes",
+    y="count"
+    
+  )+
+  theme_classic()
+```
+
+
+
+### partition the dataset into training and testing sets 
+```{r}
+set.seed(123)
+trainIndex<-createDataPartition(data$diabetes,p=.8,
+                                list=FALSE,
+                                times=1)
+train<-data[trainIndex, ]
+test<-data[-trainIndex, ]
+
+```
+
+### check the dimension of training and testing set
+```{r}
+dim(train)
+dim(test)
+```
+
+### set the reference categories
+```{r}
+data$smoking_history<-relevel(data$smoking_history, ref="current")
+data$hypertension<-relevel(data$hypertension, ref="No")
+data$heart_disease<-relevel(data$heart_disease, ref="No")
+```
+
+### fit a logistic regressin model
+```{r}
+model<-glm(diabetes~., data=train, family=binomial)
+summary(model)
+```
+
+### Re-estimate the glm model by specifying the reference category for categorical variables
+```{r}
+model1<-glm(diabetes~age+hypertension+heart_disease+
+              smoking_history+BMI+
+              HbA1c_level+ blood_glucose_level,
+            data=train, family=binomial)
+summary(model1)
+```
+
+# interpretation **
+-  unit in (positive integer Estimate) increases the probability of someone being diabetic
+ - unit in (negative integer Estimate) decreases the probability of someone being diabetic
+
+
+## report
+```{r}
+report(model1)
+```
+
+## model predictions
+```{r}
+probabilities<-predict(model1, newdata=test, type="response")
+head(probabilities)
+```
+
+
+## convert the probabilities to factors 'Yes' and 'No'
+```{r}
+predicted_class<-ifelse(probabilities>0.5, "yes", "no")
+predict_factor<-factor(predicted_class, levels=levels(test$diabetes))
+head(predicted_class)
+```
+
+## confusion matrix
+```{r}
+lg_cm<-confusionMatrix(predict_factor, reference=test$diabetes, positive="Yes")
+lg_cm
+```
+
+## four fold confusion matrix plot
+```{r}
+m<-lg_cm$byClass[c(1,2,5,7,11)]
+m
+```
+
+## plotting confusion matrix plot
+```{r}
+fourfoldplot(lg_cm$table, col=c(2,3), main="confusion matrix for logistic regression model")
+```
+
+
+
+
+
+
+
+
+
+

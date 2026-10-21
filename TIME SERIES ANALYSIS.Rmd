@@ -1,0 +1,227 @@
+---
+title: "TIME SERIES ANALYSIS"
+author: "MAKINI Caleb"
+date: "`r Sys.Date()`"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+
+
+             
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo        = TRUE,          # show the code in HTML
+  tidy        = TRUE,          # run formatR on the code
+  tidy.opts   = list(
+    comment     = FALSE,       # <-- STRIP "#" comments from displayed code
+    blank       = FALSE,       # drop blank lines
+    widthCutoff = 120          # keep long lines readable
+  ),
+  comment     = NA,            # hide the "##" prefix on output
+  warning     = FALSE,
+  message     = FALSE,
+  eval        = TRUE,
+  fig.align   = "center",
+  fig.width   = 10,
+  fig.height  = 6,
+  dpi         = 120,
+  dev         = "png",
+  fig.show    = "asis",
+  fig.keep    = "all",
+  out.width   = "100%"
+)
+                      
+```
+
+
+# setting a working directory
+```{r}
+
+
+setwd("C:/Users/ADMIN/OneDrive/Desktop/caleb makini")
+```
+
+
+
+
+```{r}
+# loading libraries
+
+
+library(ggplot2)
+library(ggthemes)
+library(stats)
+library(forecast)
+library(tseries)
+library(formatR)
+library(papaja)
+library(report)
+
+```
+
+
+```{r}
+# simple time series test
+
+
+
+data=data.frame(
+  date=seq(as.Date("2025-01-01"), as.Date("2026-12-31"), by="month"),
+           value=c(100, 102, 141, 160, 128, 200, 202, 204, 260, 208, 300, 320, 250, 202, 140, 160, 138,
+                   200, 202, 204, 265, 208, 359, 380))
+
+head(data)
+```
+
+
+
+
+
+```{r}
+# convert date column to date format
+
+data$date<-as.Date(data$date)
+head(data)
+```
+
+
+
+
+
+```{r}
+# plot time series
+
+ggplot(data, aes(x=date,  y=value))+
+  geom_line(color="blue")+
+  labs(
+    title="time series data",
+    x="date",
+    y="value"
+  )+
+  theme_minimal()
+```
+
+
+
+
+
+
+```{r}
+# Decompose time series data
+
+# create a time series object
+
+ts_data<-ts(data$value, frequency = 12, start = c(2025, 1))
+
+# decompose time series
+
+decomposed_data<-decompose(ts_data)
+
+# plot the decompostion
+
+plot(decomposed_data)
+
+```
+
+
+```{r}
+# Autocorrelation function
+
+acf(ts_data, lag.max=20)
+```
+
+
+```{r}
+# partial autocorrelation of data
+
+pacf(ts_data, lag.max=20)
+```
+
+
+
+
+```{r}
+# check stationality using (Augmented dickey Fuller test (ADF))
+
+adf_results<-adf.test(ts_data)  # if p-value<5%, the series is stationary
+
+print(adf_results)
+
+# series not stationary since p-value is greater than 5%
+
+
+
+```
+
+
+
+```{r}
+# if p-value> 5%, we take first difference
+
+diff_data<-diff(ts_data)
+plot(diff_data, main=" differenced time series data", col="red")
+adf.test(diff_data)
+```
+
+
+
+```{r}
+# if p-value> 5%, we take 2nd difference
+
+diff2_data<-diff(diff_data)
+diff3_data<-diff(diff2_data)
+diff4_data<-diff(diff3_data)
+plot(diff4_data, main=" differenced time series data", col="red")
+adf.test(diff4_data)
+```
+
+
+```{r}
+# buid ana ARIMA model
+
+# fit arim,a model
+
+arima_model<- auto.arima(diff4_data)
+summary(arima_model)
+```
+
+
+```{r}
+# forecasting future format
+
+forecast_arima<- forecast(arima_model, h=6)
+head(forecast_arima)
+# forecast next 6 periods
+
+plot(forecast_arima)
+```
+
+
+# report
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

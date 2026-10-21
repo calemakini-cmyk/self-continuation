@@ -1,0 +1,225 @@
+---
+title: "Analysis of Variation(ANOVA) AND PARAMETRIC TEST"
+author: "MAKINI CALEB"
+date: "`r Sys.Date()`"
+output: html_document
+---
+             
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo        = TRUE,          # show the code in HTML
+  tidy        = TRUE,          # run formatR on the code
+  tidy.opts   = list(
+    comment     = FALSE,       # <-- STRIP "#" comments from displayed code
+    blank       = FALSE,       # drop blank lines
+    widthCutoff = 120          # keep long lines readable
+  ),
+  comment     = NA,            # hide the "##" prefix on output
+  warning     = FALSE,
+  message     = FALSE,
+  eval        = TRUE,
+  fig.align   = "center",
+  fig.width   = 10,
+  fig.height  = 6,
+  dpi         = 120,
+  dev         = "png",
+  fig.show    = "asis",
+  fig.keep    = "all",
+  out.width   = "100%"
+)
+                      
+```
+
+
+# setting a working directory
+
+
+```{r}
+
+setwd("C:/Users/ADMIN/OneDrive/Desktop/caleb makini")
+
+```
+
+# loading libraries
+
+```{r}
+library(dplyr)
+library(tidyverse)
+library(ggplot2)
+
+```
+# import data
+
+```{r}
+hg<-read.csv("gsssubset.csv")
+head(hg)
+```
+
+# one way Anova
+## test whether there are significance differences btn group means
+
+```{r}
+data7<-data.frame(
+  group=factor(c("A","A","A","B","B","B","C","C","C")),
+  value=c(5:13)
+)
+head(data7)
+```
+
+
+
+# perform 1 way ANOVA
+
+## HO: there is no significance diffrence across the scores across the three groups
+## H1: there is significance  scores across the three groups
+```{r}
+one_anova<-aov(value~group, data=data7)
+summary(one_anova)
+```
+
+# results
+- since the p-value<5%, we reject null hypothesis and conclude that exist significance btn the 3 groups
+
+
+# post-hoc test(turkey's hsd) :  identify  which group differ significantly  after a significant anova results
+
+```{r}
+turkey_results=TukeyHSD(one_anova)
+print(turkey_results)
+
+```
+
+- b-a exist
+
+
+
+# plot the results
+
+```{r}
+
+plot(turkey_results)
+```
+
+
+
+# 2-way Anova
+```{r}
+data9<-data.frame(
+ factor1=factor(c("X","X","X","Y","Y","Y")),
+   factor2=factor(c("P","Q","R","P","Q","R")),
+ value1=c(5:10)
+)
+head(data9)
+```
+
+
+
+
+# perform 2 way anova
+
+## H0: there is no significance difference on avarage income across factor 1
+## H1: there is no significance difference on avarage income across factor 2
+## H2: there is no significance difference on avarage income across the interaction
+
+```{r}
+anova_model1<-lm(value1~factor1*factor2, data=data9)
+anova_result<-anova(anova_model1)
+print(anova_result)
+```
+
+
+# using real data set
+
+
+## H0: there is no significance difference on avarage income across gender
+## H1: there is no significance difference on avarage income across marital status
+## H2: there is no significance difference on avarage income across the interaction
+
+
+
+```{r}
+hg$marital<-as.factor(hg$marital)
+hg$sex<-as.factor(hg$sex)
+anova_model_data<-lm(income~sex*marital, data=hg)
+anova_tway<-anova(anova_model_data)
+print(anova_tway)
+```
+
+
+- the data is significance 
+
+
+
+# by degree
+
+## H0: there is no significance difference on avarage income across degree
+## H1: there is no significance difference on avarage income across marital status
+## H2: there is no significance difference on avarage income across the interaction
+
+
+```{r}
+hg$marital<-as.factor(hg$marital)
+hg$degree<-as.factor(hg$degree)
+anova_model_data4<-lm(income~degree*marital, data=hg)
+anova_tway2<-anova(anova_model_data4)
+print(anova_tway2)
+```
+
+- degree ~marital,no significancy
+income~degree * marital, significancy interaction exists
+
+
+# non - parametric sets
+
+## wilcoxon rank_sum test(mann-whitney u test): compare medians of 2 independent
+
+
+```{r}
+group00<-c(5:7)
+group000<-c(8:10)
+wilcon<-wilcox.test(group00, group000)
+print(wilcon)
+```
+
+- since the p-value>5%, we fail to reject null analysis and conclude that their is no difference significant  btn median of  group (00 and 000)
+
+
+
+
+
+# kruskal-wallis test: compare median of more than one group
+
+## H0: median value of A=B=C
+## H1: median value of A!=B!=C
+
+```{r}
+data222<-data.frame(
+  group6=factor(c("A","A","A","B","B","B","C","C","C")),
+  value=c(5:13)
+)
+head(data222)
+```
+
+
+
+# kruskal-willis test
+
+```{r}
+kruskal_results<-kruskal.test(value~group6, data=data222)
+print(kruskal_results)
+```
+
+
+- sinjce p-value< 5%, we fail to reject the null hypontesis and conclude that there is a signifacnce difference in median btn group A, B and C
+
+
+
+# using gsssubset
+
+```{r}
+kruskal_result2<-kruskal.test(hg$income~hg$marital, data=data222)
+print(kruskal_result2)
+```
+
+- p-value<5%, we fail to reject,
+

@@ -1,0 +1,197 @@
+---
+title: "Random Forest Classification"
+author: "MAKINI CALEB"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+             
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo        = TRUE,          # show the code in HTML
+  tidy        = TRUE,          # run formatR on the code
+  tidy.opts   = list(
+    comment     = FALSE,       # <-- STRIP "#" comments from displayed code
+    blank       = FALSE,       # drop blank lines
+    widthCutoff = 120          # keep long lines readable
+  ),
+  comment     = NA,            # hide the "##" prefix on output
+  warning     = FALSE,
+  message     = FALSE,
+  eval        = TRUE,
+  fig.align   = "center",
+  fig.width   = 10,
+  fig.height  = 6,
+  dpi         = 120,
+  dev         = "png",
+  fig.show    = "asis",
+  fig.keep    = "all",
+  out.width   = "100%"
+)
+                      
+```
+
+# SETTING A WORKING DIRECTORY
+```{r}
+ setwd("C:/Users/ADMIN/OneDrive/Desktop/caleb makini")
+
+```
+
+
+
+# loading libraries
+```{r}
+library(tidyverse)
+library(rio)
+library(ggplot2)
+library(psych)
+library(ggthemes)
+library(summarytools)
+library(tidyr)
+library(formatR)
+library(sjmisc)
+library(caret)
+library(randomForest)
+library(report)
+```
+
+# load inbuilit data
+```{r}
+data(iris)
+head(iris)
+```
+
+
+
+# data structure
+```{r}
+str(iris)
+```
+
+
+# view data set
+```{r}
+View(iris)
+```
+
+# SET SEED: to ensure reproducibity
+```{r}
+set.seed(123)
+
+```
+
+# confirm missing values
+```{r}
+sum(is.na(iris))
+colSums(is.na(iris))
+```
+
+
+
+
+
+# split data set
+### train model
+```{r}
+train_iris<- sample(seq_len(nrow(iris)), size=.7*nrow(iris))
+train_iris_data<- iris[train_iris, ]
+test_iris<- iris[-train_iris, ]
+```
+
+### check dimension
+```{r}
+dim(train_iris_data)
+dim(test_iris)
+```
+
+# head
+```{r}
+head(train_iris_data) # random data split
+```
+
+
+# train random forest classify model
+```{r}
+rf_model<- randomForest(
+  
+  formula =Species~.,
+  data= train_iris_data,
+  ntree=500,
+  mtry=2,
+  importance=TRUE,
+  proximity = FALSE
+             
+)
+```
+
+
+## print model summary
+```{r}
+print(rf_model)
+```
+
+### predict on test set
+```{r}
+predictions<- predict(rf_model, newdata = test_iris)
+head(predictions)
+head(test_iris)
+```
+
+### model evaluation performanve
+```{r}
+conf_mat<- table(pridicted=predictions, actual= test_iris$Species)
+print(conf_mat)
+
+accuracy<- sum(diag(conf_mat))/ sum(conf_mat)
+cat("test Accuracy:", round(accuracy, 4),"\n")
+```
+
+
+### variable importance
+```{r}
+cat(" \n variable importance(mean decrease in accuracy:\n")
+print(importance(rf_model, type=1))
+```
+
+
+
+
+### variable importance
+```{r}
+varImpPlot(rf_model, main=" Random Forest variable importance")
+```
+
+
+
+
+
+### creating new data
+```{r}
+data=data.frame(Sepal.Length=c(4.6, 4.1),
+                Sepal.Width= c(2.6, 3.5),
+                Petal.Length=c(1.3, 1.4),
+                Petal.Width=c(0.3, 0.4)
+            
+                )
+head(data)
+```
+
+
+
+## predictoion on new data set
+```{r}
+predicted<-predict(rf_model, newdata=data)
+head(predicted)
+```
+
+
+
+
+
+
+
+
+
+
+
+

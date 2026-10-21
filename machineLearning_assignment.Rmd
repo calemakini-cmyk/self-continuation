@@ -1,0 +1,1201 @@
+---
+title: 'Asssignment:  Machine Learning'
+author: "MAKINI CALEB"
+date: "`r Sys.Date()`"
+output: html_document
+---
+             
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo        = TRUE,          # show the code in HTML
+  tidy        = TRUE,          # run formatR on the code
+  tidy.opts   = list(
+    comment     = FALSE,       # <-- STRIP "#" comments from displayed code
+    blank       = FALSE,       # drop blank lines
+    widthCutoff = 120          # keep long lines readable
+  ),
+  comment     = NA,            # hide the "##" prefix on output
+  warning     = FALSE,
+  message     = FALSE,
+  eval        = TRUE,
+  fig.align   = "center",
+  fig.width   = 10,
+  fig.height  = 6,
+  dpi         = 120,
+  dev         = "png",
+  fig.show    = "asis",
+  fig.keep    = "all",
+  out.width   = "100%"
+)
+                      
+```
+
+# SETTING A WORKING DIRECTORY
+```{r}
+ setwd("C:/Users/ADMIN/OneDrive/Desktop/caleb makini")
+
+```
+
+
+# load libraries
+```{r}
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(ggthemes)
+library(psych)
+library(sjmisc)
+library(kableExtra)
+library(knitr)
+library(tidyr)
+library(reshape2)
+library(formatR)
+library(corrplot)
+```
+
+# DATASET 1: LOAN PREDICTION (Classification) 
+## Target variable: loan Approved
+### Algorithm: SVM Classification 
+#### section A: Data Cleaning
+### Q1: Load dataset
+```{r}
+data<-read.csv("Loan_Approved data.csv")
+head(data)
+```
+
+
+# report
+```{r}
+cat("NO of Rows:",nrow(data),"\n No of columns:",ncol(data))
+```
+
+- The data set has 592 rows and 7 columns
+
+### Check the structure of the data set
+```{r}
+str(data)
+```
+
+#### columns that are incorrectly typed
+- Loan_approved from integer to factor
+- conversion to factor
+```{r}
+data$Loan_Approved<- as.factor(data$Loan_Approved)
+```
+## confirm for changes
+```{r}
+str(data)
+```
+## Q3: Check for duplicates
+```{r}
+
+n_dups <- sum(duplicated(data))
+
+cat(if (n_dups == 0) "No duplicates found.\n" else paste(n_dups, "duplicate row(s) found.\n"))
+```
+
+
+## Q4: Detect and Identify outliers
+
+## select numeric variables
+```{r}
+c_var<-c(
+   
+  
+   "Income" ,
+   
+   "Loan_Amount")   
+  
+# boxplot of outliers
+data[c_var] |>
+  scale() |>                                        
+  # standardize: (x - mean) / sd
+  as.data.frame() |>
+  pivot_longer(everything(), 
+               names_to = "variable",
+               values_to = "value") |>
+  ggplot(aes(x = variable, y = value, fill = variable)) +
+  geom_boxplot(outlier.colour = "red", outlier.size = 2) +
+  facet_wrap(~ variable, scales = "free") +
+  theme_minimal() +
+  theme(legend.position = "none") +
+  labs(title = "Boxplots of numerical variables", x = NULL, y = NULL)
+
+
+
+```
+ 
+ 
+# detection using 1.5 IQR
+```{r}
+detect_outliers_IQR<- function(x){
+ Q1<- quantile(x, 0.25, na.rm=TRUE)
+ Q3<- quantile(x, 0.75, na.rm=TRUE)
+ IQR<-Q3-Q1
+ lower<-Q1-1.5*IQR
+ upper<-Q3+1.5*IQR
+ which(x<lower|x>upper)}
+  
+```
+
+
+
+# confirmation of outlier detection
+# count outliers
+```{r}
+  
+outlier_count <- sapply(data[c_var],
+                        function(x) length(detect_outliers_IQR(x)))
+outs <- outlier_count[outlier_count > 0]
+
+if (length(outs) == 0) {
+  cat("No outliers detected in any numerical variable.\n")
+} else {
+  cat("Outliers detected:\n")
+  print(outs)
+}
+```
+
+
+### get mode function
+```{r}
+get_mode<-function (x){
+  ux<-unique(na.omit(x))
+  ux[which.max(
+    tabulate(match(x, ux)))]}
+
+  cat("mode=",get_mode(data$Loan_Amount),"\n")
+```
+
+## replace with the mode (iterate until stable)
+```{r}
+max_iter   <- 10
+converged  <- FALSE
+
+for (i in seq_len(max_iter)) {
+  n_replaced <- 0
+  for (var in c_var) {
+    idx <- detect_outliers_IQR(data[[var]])
+    if (length(idx) > 0) {
+      mode_val <- get_mode(data[[var]])
+      data[[var]][idx] <- mode_val
+      n_replaced <- n_replaced + length(idx)
+    }
+  }
+  cat(sprintf("Pass %d: replaced %d value(s)\n", i, n_replaced))
+  if (n_replaced == 0) { converged <- TRUE; break }
+}
+
+if (!converged) warning("Outlier replacement did not converge in ", max_iter, " passes.")
+```
+
+
+### re_count outliers per columns
+```{r}
+  outlier_count_after <- sapply(data[c_var],
+                              function(x) length(detect_outliers_IQR(x)))
+
+
+outliers_check <- data.frame(
+  before_treatment = outlier_count,
+  after_treatment  = outlier_count_after
+)
+# confirm using table
+outliers_check
+
+#  confirm using boxplot of outliers
+data[c_var] |>
+  scale() |>                                        
+  # standardize: (x - mean) / sd
+  as.data.frame() |>
+  pivot_longer(everything(), 
+               names_to = "variable",
+               values_to = "value") |>
+  ggplot(aes(x = variable, y = value, fill = variable)) +
+  geom_boxplot(outlier.colour = "red", outlier.size = 2) +
+  facet_wrap(~ variable, scales = "free") +
+  theme_minimal() +
+  theme(legend.position = "none") +
+  labs(title = "Boxplots of numerical variables", x = NULL, y = NULL)
+
+
+```
+
+
+# print a clear "none" message
+```{r}
+total <- sum(outlier_count_after)
+
+cat(if (total == 0) "No outliers remain.\n"
+    else sprintf("\n%d outlier(s) still present.\n", total))
+
+# per-column message
+for (var in c_var) {
+  n <- length(detect_outliers_IQR(data[[var]]))
+  cat(sprintf("%-18s : %s\n", var,
+              if (n == 0) "clean" else paste(n, "outlier(s) remaining")))
+}
+# verification
+stopifnot(all(sapply(data[c_var],
+                     function(x) length(detect_outliers_IQR(x))) == 0))
+cat("Confirmed: no outliers detected in any column of c_var.\n")
+
+```
+
+
+
+
+## section B: MIssing variables
+### Q5: Count number of missing variables in each column
+```{r}
+na_counts <- colSums(is.na(data))
+miss <- na_counts[na_counts > 0]
+
+if (length(miss) == 0) {
+  cat("No missing values in any column.\n")
+} else {
+  cat("Columns with missing values:\n")
+  print(miss)
+}
+```
+#### Q5 successful checked and no missing value hence we skip
+- Q6. Impute missing values in `Income` and `Loan_Amount` using the median. Justify why median is
+preferred over mean for these columns.
+- Q7. Would you impute missing values in the target variable `Loan_Approved`? Justify your answer.
+- Q8. Verify that no missing values remain after treatment.
+
+## section c: Descriptive statistics
+### compute mean, median, sd, minimum and maximumn of all numerical variables
+#### select numerical variables
+```{r}
+num_var<-c(
+  
+  "Age", "Income", "Credit_Score",
+           "Loan_Amount", "Employment_Years"
+)
+
+```
+
+# confirmation of outlier detection
+# count outliers
+```{r}
+  
+outlier_count <- sapply(data[num_var],
+                        function(x) length(detect_outliers_IQR(x)))
+outs <- outlier_count[outlier_count > 0]
+
+if (length(outs) == 0) {
+  cat("No outliers detected in any numerical variable.\n")
+} else {
+  cat("Outliers detected:\n")
+  print(outs)
+}
+```
+
+### count outliers per columns
+```{r}
+ #  confirm using boxplot of outliers
+data[num_var] |>
+  scale() |>                                        
+  # standardize: (x - mean) / sd
+  as.data.frame() |>
+  pivot_longer(everything(), 
+               names_to = "variable",
+               values_to = "value") |>
+  ggplot(aes(x = variable, y = value, fill = variable)) +
+  geom_boxplot(outlier.colour = "red", outlier.size = 2) +
+  facet_wrap(~ variable, scales = "free") +
+  theme_minimal() +
+  theme(legend.position = "none") +
+  labs(title = "Boxplots of numerical variables", x = NULL, y = NULL)
+
+
+```
+
+```{r}
+summary_stats <- function(x) {
+  c(mean = mean(x, na.rm = TRUE),
+    sd   = sd(x,   na.rm = TRUE),
+    min  = min(x,  na.rm = TRUE),
+    max  = max(x,  na.rm = TRUE))
+}
+
+
+stats <-sapply(data[num_var], summary_stats)
+stats_df <- data.frame(variable = colnames(stats),
+                       t(stats),
+                       row.names = NULL)
+stats_df
+```
+
+
+## Q10: compute skewness
+```{r}
+library(e1071)
+
+sk <- sapply(data[num_var], skewness)
+# using table view
+skew_df <- data.frame(
+ Variable  = names(sk),
+  Skewness  = round(as.numeric(sk), 3),
+ 
+  Direction = ifelse(sk > 0, 
+                     "Right-skewed (positive)",
+              ifelse(sk < 0,
+                     "Left-skewed (negative)", "Symmetric")),
+ 
+  Magnitude = ifelse(abs(sk) < 0.5, 
+                     "Low / roughly symmetric",
+              ifelse(abs(sk) < 1, 
+                     "Moderate",
+                                    
+                      "High")),
+  row.names = NULL
+)
+skew_df
+
+# skewness visualization
+par(mfrow = c(1, 2))
+hist(data$Income,      breaks = 30, col = "lightblue",
+     main = "Income",      xlab = "Income")
+abline(v = mean(data$Income),   col = "red",  lwd = 2)
+abline(v = median(data$Income), col = "blue", lwd = 2)
+
+hist(data$Loan_Amount, breaks = 30, col = "lightblue",
+     main = "Loan_Amount", xlab = "Loan_Amount")
+abline(v = mean(data$Loan_Amount),   col = "red",  lwd = 2)
+abline(v = median(data$Loan_Amount), col = "blue", lwd = 2)
+par(mfrow = c(1, 1))
+```
+
+
+- The skewness of Income is 0.713 and of Loan_Amount is 0.749. Both are positive and fall in the 0.5–1 range, indicating moderate right-skewness. This means the majority of applicants have relatively modest incomes and take out smaller loans, while a smaller number of high-income applicants take much larger loans, producing a long right tail. The result is consistent with mean > median for both variables and with the shape of their histograms.
+
+
+
+## Q11.class distribution of `Loan_Approved`. Is the dataset balanced or imbalanced?
+```{r}
+## 1. Normalise Loan_Approved to a factor with levels c("No", "Yes")
+x <- data$Loan_Approved
+
+if (is.factor(x)) {
+  x <- as.character(x)
+}
+
+x_chr <- trimws(tolower(as.character(x)))
+
+data$Loan_Approved <- factor(
+  dplyr::case_when(
+    x_chr %in% c("no",  "n", "0", "false", "f") ~ "No",
+    x_chr %in% c("yes", "y", "1", "true",  "t") ~ "Yes",
+    TRUE ~ NA_character_
+  ),
+  levels = c("No", "Yes")
+)
+
+## Sanity check — should print only "No" and "Yes"
+print(table(data$Loan_Approved, useNA = "ifany"))
+
+
+
+
+
+
+
+## 2. Build the distribution table here so it always exists
+class_counts <- table(data$Loan_Approved)
+class_props  <- prop.table(class_counts)
+
+dist_df <- data.frame(
+  Loan_Approved = names(class_counts),
+  Count         = as.integer(class_counts),
+  Proportion    = round(as.numeric(class_props), 3),
+  Percent       = paste0(round(100 * as.numeric(class_props), 1), "%"),
+  row.names     = NULL
+)
+
+## 3. Pie chart 
+ggplot(dist_df, aes(x = "", y = Count, fill = Loan_Approved)) +
+  geom_col(width = 1, colour = "white") +
+  coord_polar(theta = "y") +
+  geom_text(aes(label = paste0(Loan_Approved, "\n", Percent)),
+            position = position_stack(vjust = 0.5),
+            colour   = "white", size = 5, fontface = "bold") +
+  scale_fill_manual(values = c("No" = "tomato", "Yes" = "steelblue")) +
+  labs(title = "Class distribution of Loan_Approved",
+       fill  = "Loan_Approved",
+       x = NULL, y = NULL) +
+  theme_void() +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"))
+```
+
+- The dataset is balanced — the Yes class is the majority at 59.5%, but the split is close to 60/40 and well within the accepted range for a balanced classification problem.
+
+
+
+## Q12. Compute the correlation matrix for all numerical features.
+```{r}
+cor_mat <- cor(data[num_var], use = "complete.obs")
+
+cor_df <- melt(round(cor_mat, 3))
+colnames(cor_df) <- c("Variable_1", "Variable_2", "Correlation")
+round(cor_mat, 3) |>
+  as.data.frame() |>
+  tibble::rownames_to_column("Variable")
+```
+
+- The correlation matrix shows that all numerical features are strongly positively correlated, with values ranging from 0.803 to 0.991. Age and Employment_Years are the most strongly correlated pair (r = 0.991), meaning they carry almost the same information. Because the features overlap so heavily
+
+
+# SECTION D: Visualization
+## Q13. Histogram of `Credit_Score`.  and Description of  the shape of the distribution.
+```{r}
+x <- data$Credit_Score
+
+## summary values
+m_mean   <- mean(x)
+m_median <- median(x)
+
+## mode (most frequent value)
+get_mode <- function(v) {
+  v <- v[!is.na(v)]
+  ux <- unique(v)
+  ux[which.max(tabulate(match(v, ux)))]
+}
+m_mode <- get_mode(x)
+
+ggplot(data, aes(x = Credit_Score)) +
+  
+  geom_histogram(bins = 20, fill = "steelblue", colour = "white") +
+  
+  geom_vline(xintercept = m_mean,   colour = "red",   linewidth = 1, linetype = "solid") +
+  
+  geom_vline(xintercept = m_median, colour = "blue",  linewidth = 1, linetype = "dashed") +
+  
+  geom_vline(xintercept = m_mode,   colour = "green", linewidth = 1, linetype = "dotted") +
+  
+  annotate("text", x = m_mean,   y = Inf, label = "Mean",   vjust = 2, colour = "red") +
+  
+  annotate("text", x = m_median, y = Inf, label = "Median", vjust = 4, colour = "blue") +
+  
+  annotate("text", x = m_mode,   y = Inf, label = "Mode",   vjust = 6, colour = "green") +
+  
+  labs(title = "Distribution of Credit_Score",
+       x = "Credit Score", y = "Frequency") +
+  
+  theme_minimal()
+
+```
+
+
+### Description of the shape
+The histogram of Credit_Score shows a roughly symmetric, bell-shaped (unimodal) distribution, with the three central-tendency lines confirming the shape:
+
+- Mean (red, ≈ 651.7), Median (blue, ≈ 650.0), and Mode (green) all sit close together near the centre of the distribution. When mean ≈ median ≈ mode, the distribution is approximately symmetric — a classic signature of normality.
+
+- Shape: Bell-shaped, unimodal — a single clear peak around 640–700, with frequencies tapering off evenly on both sides.
+
+- Spread: Scores range from 450 to 820, standard deviation ≈ 109.
+
+- Skewness: Near zero (previously computed ≈ –0.05) — the left and right tails are balanced.
+
+- Outliers: None — the tails fade smoothly, and no isolated bars appear far from the centre.
+
+- Modality: Unimodal — one peak, no secondary clusters.
+
+### What the lines tell us visually:
+
+- If the mean line sits to the right of the median, the distribution is right-skewed.
+
+- If the mean line sits to the left of the median, it is left-skewed.
+
+- the distribution is left-skewed
+
+### Conclusion (one-liner)
+- The histogram of Credit_Score is left-skewed (negatively skewed) and unimodal, centred around 650 with a range of 450–820. The mean line sits to the left of the median line, confirming that the longer tail lies on the left side of the distribution. No outliers are present.
+
+
+# Q14: boxplot of income grouped by loan approval, study their relationship
+```{r}
+ggplot(data, aes(x = Loan_Approved, y = Income, fill = Loan_Approved)) +
+  geom_boxplot(width = 0.5, outlier.colour = "black") +
+  stat_summary(fun = mean, geom = "point",
+               shape = 23, size = 3, fill = "white") +
+  scale_fill_manual(values = c("No" = "tomato", "Yes" = "steelblue")) +
+  labs(title = "Income by Loan Approval Status",
+       subtitle = "White diamonds = group means",
+       x = "Loan Approved", y = "Income") +
+  theme_minimal() +
+  theme(legend.position = "none")
+```
+```{r}
+
+agg <- aggregate(Income ~ Loan_Approved, data = data,
+                 FUN = function(x) c(n = length(x), min = min(x),
+                                     median = median(x),
+                                     mean = mean(x), max = max(x)))
+
+do.call(data.frame, agg)
+```
+
+## What the boxplot reveals
+### Complete separation by income. 
+- The two boxes do not overlap at all — the highest income in the "No" group (42,000) is still below the lowest in the "Yes" group (44,000). Every approved applicant earns more than every non-approved applicant, so income perfectly discriminates approval status in this dataset.
+
+### Much higher median for approved. 
+- The median income of the "Yes" group (72,000) is roughly 2.5× that of the "No" group (28,500). The means tell the same story — 77,273 vs 28,850, a ratio of about 2.7×.
+
+- mSimilar spread, different location. Both boxes have comparable IQR widths — the variability in income is similar across groups, so it is the location (central tendency) that differs, not the dispersion.
+
+### Different ranges.
+
+- "No" is tightly bounded between 17,000 and 42,000 (median 28,500).
+
+- "Yes" stretches from 44,000 up to 135,000 (median 72,000) — the approved group contains the entire high-income tail.
+
+### Few or no outliers.
+- The whiskers extend to the extremes because the data is bounded and evenly spread — no isolated points lie beyond the fences.
+
+
+
+# Q15: scatter plot of income vs credit_score  colored by loan_approved and check wheter the boundary btn approved and rejected separable
+```{r}
+ggplot(data, aes(x = Income, y = Credit_Score,
+                 colour = Loan_Approved)) +
+   geom_point( size = 3, alpha = 0.7) +
+  geom_smooth(method = "lm", se = TRUE, color = "red", 
+              linetype = "dashed") +
+    scale_colour_manual(values = c("No" = "skyblue", "Yes" = "blue")) +
+  labs(title    = "Income vs Credit_Score by Loan Approval",
+       subtitle = "Dashed line at Income = 43,000",
+       x = "Income", y = "Credit_Score",
+       colour = "Loan_Approved") +
+ theme_minimal() +
+  theme(
+    plot.title = element_text(face = "bold", size = 18),
+    axis.title = element_text(size = 12)
+  )
+```
+
+### Positive relationship. 
+- As income increases, the likelihood of approval increases. This is consistent with the correlation analysis, where Income correlated strongly with other approval-linked features.
+
+### Implication for modelling. 
+- Because the two groups are perfectly separated, Income is expected to be the single strongest predictor of Loan_Approved — a tree-based model will split on income first, and logistic regression will give it a large positive coefficien
+
+
+# Q16. A bar chart showing the count of approved vs rejected loans. & Commentation on the balance.
+```{r}
+ggplot(data, aes(x = Loan_Approved, fill = Loan_Approved)) +
+  geom_bar() +
+  geom_text(stat = "count", aes(label = after_stat(count)),
+            vjust = -0.5, size = 5, fontface = "bold") +
+  scale_fill_manual(values = c("No" = "tomato", "Yes" = "steelblue")) +
+  labs(title = "Count of Approved vs Rejected Loans",
+       x     = "Loan Approved",
+       y     = "Count",
+       fill  = "Loan_Approved") +
+  theme_minimal() +
+  theme(legend.position = "none",
+        plot.title = element_text(hjust = 0.5, face = "bold"))
+```
+
+- The bar chart of Loan_Approved shows 352 approved loans (59.5%) and 240 rejected loans (40.5%), giving a majority-to-minority ratio of 1.47 : 1. The minority class accounts for more than 40% of the data, and the ratio sits below the conventional 1.5 : 1 threshold, so the dataset is approximately balanced.
+
+
+
+# Q17: Heatmap
+```{r}
+cor_mat <- cor(data[num_var])
+melted  <- melt(cor_mat)
+melted$Var1 <- factor(melted$Var1, levels = num_var)
+melted$Var2 <- factor(melted$Var2, levels = num_var)
+
+ggplot(melted, aes(x = Var1, y = Var2, fill = value)) +
+  geom_tile(colour = "white", linewidth = 0.5) +
+  geom_text(aes(label = round(value, 2)), size = 3.5, colour = "black") +
+  scale_fill_gradient2(low      = "tomato",
+                       mid      = "white",
+                       high     = "steelblue",
+                       midpoint = 0,
+                       limits   = c(-1, 1),
+                       name     = "r") +
+   coord_fixed() +
+          
+  labs(title = "Correlation Heatmap — Numerical Features",
+       x = NULL, y = NULL) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        plot.title  = element_text(hjust = 0.5, face = "bold"))
+```
+
+
+- All off-diagonal cells deep blue (r > 0.80); 6 of 10 pairs exceed 0.90; severe multicollinearity 
+
+
+
+# SECTION E: Scaling
+## Q18. Why is feature scaling important for SVM classification? Would XGBoost require scaling? Explain.
+
+
+# Q19. Apply standardization (Z-score) to all numerical features. Show the first 5 rows of the scaled data.
+```{r}
+std_data<-data.frame(scale(data[num_var]))
+head(std_data, 5)
+```
+
+
+# Q20. Verify that the scaled features have mean ≈ 0 and standard deviation ≈ 1.
+```{r}
+cat("===== Means (≈ 0) =====\n")
+print(round(colMeans(std_data), 6))
+
+cat("\n===== Standard deviations (≈ 1) =====\n")
+print(round(apply(std_data, 2, sd), 6))
+```
+
+# Q21. Should the scaling parameters be computed on the full dataset or only the training set? Justify.
+
+
+### Only on the training set. The scaling parameters (mean, standard deviation, min, max — whichever you use) must be computed exclusively from the training data, then applied to the test data (and any future data).
+
+####Justification
+- 1. Data leakage (the main reason):
+If you compute the mean and standard deviation using the full dataset (training + test), information from the test set "leaks" into the training process. The model indirectly sees the test set's distribution before it is supposed to. This makes the test set no longer a fair, unseen sample.
+
+- The result: your evaluation metrics (RMSE, accuracy, AUC, etc.) become overly optimistic and do not reflect how the model would perform on genuinely new data.
+
+- 2. Simulating real-world deployment:
+In production, when a new observation arrives, you will not have the future dataset to recompute scaling parameters. You must use the parameters learned during training. So the training pipeline should mimic this: compute parameters once on the training data, freeze them, and reuse them for everything else.
+
+- 3. Preserving the test set as a proxy for unseen data:
+The whole point of a test set is to estimate out-of-sample performance. If the test set influenced the scaling, it is no longer "out-of-sample" with respect to preprocessing — the model was tuned (even if only slightly) to it.
+
+- 4. Consistency across splits:
+If you scale the training and test sets separately (each with its own mean/std), the two sets live in different feature spaces. A value of 1.0 in the training set means something different from 1.0 in the test set. This breaks the model's assumptions.
+
+
+
+
+
+# SECTION F: Train/Test Partitioning
+## Q22. Split the dataset into 80% training and 20% testing using a random split. Set a seed for
+- reproducibility. Report the number of rows in each set.
+```{r}
+library(caret)
+set.seed(123)
+train_index <- createDataPartition(data$Loan_Approved, p = 0.8, list = FALSE)
+train <- data[train_index, ]
+test <- data[-train_index, ]
+dim(train)
+dim(test)
+```
+
+
+# SECTION G: SVM Classification
+***Q23. Train an SVM classifier with a linear kernel on the scaled training data. Report the model summary.
+```{r}
+# Define features
+features <- c("Age", "Income", "Credit_Score", "Loan_Amount", "Employment_Years")
+x_train <- train[, features]
+y_train <- train$Loan_Approved
+
+# Scale features
+preProc <- preProcess(x_train, method = c("center", "scale"))
+x_train_scaled <- predict(preProc, x_train)
+x_test_scaled <- predict(preProc, test[, features])
+
+# Linear SVM
+svm_linear <- svm(x = x_train_scaled, y = y_train, kernel = "linear", cost = 1, scale = FALSE)
+summary(svm_linear)
+```
+
+# Q24. Train an SVM classifier with an RBF kernel on the scaled training data.
+```{r}
+svm_rbf <- svm(x = x_train_scaled, y = y_train, kernel = "radial", cost = 1, gamma = 0.1, scale = FALSE)
+summary(svm_rbf)
+```
+
+# Q25. Tune the hyperparameters `C` and `gamma` using `tune.svm()` or `grid search`. Report the optimal
+values.
+```{r}
+set.seed(123)
+tune_svm <- tune.svm(x = x_train_scaled, y = y_train,
+                     kernel = "radial",
+                     cost = c(0.1, 1, 10, 100),
+                     gamma = c(0.01, 0.1, 0.5, 1))
+tune_svm$best.parameters
+tune_svm$best.performance
+```
+
+
+
+# Q26. Compare the performance of the linear kernel vs the RBF kernel. Which performs better and why?
+```{r}
+# ---- 1. Predictions from both models ----
+pred_linear <- predict(svm_linear, x_test_scaled)
+pred_rbf    <- predict(svm_rbf,    x_test_scaled)
+
+# ---- 2. Force identical factor levels ("No"/"Yes") ----
+actual      <- factor(as.character(test$Loan_Approved), levels = c("No", "Yes"))
+pred_linear <- factor(as.character(pred_linear),        levels = c("No", "Yes"))
+pred_rbf    <- factor(as.character(pred_rbf),           levels = c("No", "Yes"))
+
+# ---- 3. Confusion matrices ----
+cm_linear <- confusionMatrix(pred_linear, actual,
+                             positive = "Yes", mode = "prec_recall")
+cm_rbf    <- confusionMatrix(pred_rbf,    actual,
+                             positive = "Yes", mode = "prec_recall")
+
+# ---- 4. Compare ----
+cat("Linear kernel\n"); print(cm_linear$table)
+cat("\nRBF kernel\n");  print(cm_rbf$table)
+
+cat("\n--- Metrics ---\n")
+cat(sprintf("Linear  Accuracy: %.4f | F1: %.4f | Sensitivity: %.4f | Specificity: %.4f\n",
+            cm_linear$overall["Accuracy"],
+            cm_linear$byClass["F1"],
+            cm_linear$byClass["Sensitivity"],
+            cm_linear$byClass["Specificity"]))
+
+cat(sprintf("RBF     Accuracy: %.4f | F1: %.4f | Sensitivity: %.4f | Specificity: %.4f\n",
+            cm_rbf$overall["Accuracy"],
+            cm_rbf$byClass["F1"],
+            cm_rbf$byClass["Sensitivity"],
+            cm_rbf$byClass["Specificity"]))
+```
+
+
+# Q27. Generate predictions on the test set using the best SVM model.
+```{r}
+best_svm <- tune_svm$best.model
+pred_svm <- predict(best_svm, x_test_scaled)
+head(pred_svm)
+```
+
+
+# Q28. Produce a confusion matrix for the SVM predictions. Report:
+ True Positives
+ True Negatives
+ False Positives
+ False Negatives
+```{r}
+# Confusion matrix for the SVM predictions
+
+# 1. Predict using the tuned SVM model
+pred_svm <- predict(best_svm, x_test_scaled)
+
+# 2. Force both prediction and truth to have the same levels
+pred_svm <- factor(as.character(pred_svm), levels = c("No", "Yes"))
+actual   <- factor(as.character(test$Loan_Approved), levels = c("No", "Yes"))
+
+# 3. Sanity check
+table(pred_svm, actual)
+
+# 4. Confusion matrix -- positive class is "Yes"
+cm_svm <- confusionMatrix(pred_svm, actual, positive = "Yes")
+cm_svm$table
+
+# 5. Extract the four counts
+TP <- cm_svm$table["Yes", "Yes"]   # predicted Yes, actual Yes
+TN <- cm_svm$table["No",  "No"]    # predicted No,  actual No
+FP <- cm_svm$table["Yes", "No"]    # predicted Yes, actual No
+FN <- cm_svm$table["No",  "Yes"]   # predicted No,  actual Yes
+
+TP
+TN
+FP
+FN
+```
+
+
+# Q29. Compute the following metrics for the SVM model:
+ Accuracy
+ Precision
+ Recall (Sensitivity)
+ F1-Score
+ Specificity
+```{r}
+# (uses the best SVM from Q25 and the scaled test data)
+
+pred_svm <- predict(best_svm, x_test_scaled)
+pred_svm <- factor(as.character(pred_svm), levels = c("No", "Yes"))
+actual   <- factor(as.character(test$Loan_Approved), levels = c("No", "Yes"))
+
+cm_svm <- confusionMatrix(pred_svm, actual,
+                          positive = "Yes",
+                          mode     = "prec_recall")   # ensures Precision/Recall/F1 exist
+
+print(cm_svm$table)
+
+# ---- 2. Pull metrics directly from the table (always works) ----
+TP <- cm_svm$table["Yes", "Yes"]
+TN <- cm_svm$table["No",  "No"]
+FP <- cm_svm$table["Yes", "No"]
+FN <- cm_svm$table["No",  "Yes"]
+
+accuracy_svm    <- (TP + TN) / (TP + TN + FP + FN)
+precision_svm   <- TP / (TP + FP)
+recall_svm      <- TP / (TP + FN)          # Sensitivity
+specificity_svm <- TN / (TN + FP)
+f1_svm          <- 2 * precision_svm * recall_svm /
+                   (precision_svm + recall_svm)
+
+# ---- 3. Print each metric explicitly ----
+cat("===== SVM Performance Metrics =====\n")
+cat(sprintf("Accuracy    : %.4f\n", accuracy_svm))
+cat(sprintf("Precision   : %.4f\n", precision_svm))
+cat(sprintf("Recall      : %.4f\n", recall_svm))
+cat(sprintf("F1-Score    : %.4f\n", f1_svm))
+cat(sprintf("Specificity : %.4f\n", specificity_svm))
+cat("====================================\n")
+
+# ---- 4. (Optional) cross-check against caret's byClass ----
+print(cm_svm$byClass)
+```
+
+
+### Q30. Plot the ROC curve for the SVM model and report the AUC value.
+#SECTION H: XGBoost Classification
+```{r}
+library(pROC)
+
+# ---- 1. Refit SVM with probability = TRUE ----
+svm_best_prob <- svm(
+  x = x_train_scaled,
+  y = y_train,
+  kernel = "radial",
+  cost   = tune_svm$best.parameters$cost,
+  gamma  = tune_svm$best.parameters$gamma,
+  probability = TRUE,
+  scale  = FALSE
+)
+
+# ---- 2. Predict probabilities ----
+pred_prob_svm <- predict(svm_best_prob, x_test_scaled, probability = TRUE)
+prob_matrix   <- attr(pred_prob_svm, "probabilities")
+prob_svm      <- prob_matrix[, "Yes"]     # positive class = "Yes"
+
+# ---- 3. ROC object ----
+roc_svm <- pROC::roc(
+  response  = test$Loan_Approved,
+  predictor = prob_svm,
+  levels    = c("No", "Yes")
+)
+
+# ---- 4. Plot ----
+plot(roc_svm,
+     main = "ROC Curve - SVM (RBF Kernel)",
+     col  = "blue",
+     lwd  = 2,
+     print.auc = TRUE)
+
+# ---- 5. AUC -- use the NAMESPACED call ----
+auc_svm <- pROC::auc(roc_svm)
+print(paste("SVM AUC:", round(as.numeric(auc_svm), 4)))
+```
+
+
+
+
+# Q31. Train an XGBoost classifier on the training data with default parameters.
+```{r}
+
+library(xgboost)
+cat("xgboost version:", as.character(packageVersion("xgboost")), "\n")
+
+#  Feature set 
+features <- c("Age", "Income", "Credit_Score", "Loan_Amount", "Employment_Years")
+
+#  Sanity check that all columns exist 
+stopifnot(all(features %in% names(train)))
+stopifnot(all(features %in% names(test)))
+
+# ---- 3. Build numeric matrices ----
+x_train_mat <- as.matrix(train[, features])
+x_test_mat  <- as.matrix(test[,  features])
+
+#  Convert factor target ("No"/"Yes") to 0/1 INTEGER
+# as.integer() on a factor gives 1,2 for "No","Yes" -> minus 1 gives 0,1
+y_train_num <- as.integer(train$Loan_Approved) - 1L
+y_test_num  <- as.integer(test$Loan_Approved)  - 1L
+
+# Verify
+print(table(train$Loan_Approved, y_train_num))
+stopifnot(all(y_train_num %in% c(0L, 1L)))
+
+#  Build DMatrix 
+dtrain <- xgb.DMatrix(data = x_train_mat, label = y_train_num)
+dtest  <- xgb.DMatrix(data = x_test_mat,  label = y_test_num)
+
+#  Default parameters
+params <- list(
+  objective   = "binary:logistic",
+  eval_metric = "logloss"
+)
+
+#  Train with xgb.train (more stable than xgboost())
+set.seed(123)
+xgb_default <- xgb.train(
+  params  = params,
+  data    = dtrain,
+  nrounds = 50,
+  verbose = 0
+)
+
+print(xgb_default)
+
+#  Training accuracy sanity check ----
+pred_train <- ifelse(predict(xgb_default, dtrain) > 0.5, 1L, 0L)
+cat(sprintf("Training accuracy: %.4f\n", mean(pred_train == y_train_num)))
+```
+
+
+
+
+# Q32. Tune the following hyperparameters using grid search or random search:
+ `nrounds`
+ `max_depth`
+ `eta` (learning rate)
+ `subsample`
+ `colsample_bytree`
+```{r}
+library(caret)
+library(xgboost)
+
+# Feature set
+features <- c("Age", "Income", "Credit_Score", "Loan_Amount", "Employment_Years")
+
+x_train_mat <- as.matrix(train[, features])
+y_train_num <- as.integer(train$Loan_Approved) - 1L
+dtrain      <- xgb.DMatrix(x_train_mat, label = y_train_num)
+
+# Small grid
+grid <- expand.grid(
+  nrounds          = c(50, 100),
+  max_depth        = c(3, 6),
+  eta              = c(0.1, 0.3),
+  subsample        = 0.8,
+  colsample_bytree = 0.8
+)
+
+results <- data.frame()
+
+for (i in 1:nrow(grid)) {
+  g <- grid[i, ]
+  cv <- xgb.cv(
+    params = list(
+      objective        = "binary:logistic",
+      eval_metric      = "logloss",
+      max_depth        = g$max_depth,
+      eta              = g$eta,
+      subsample        = g$subsample,
+      colsample_bytree = g$colsample_bytree
+    ),
+    data    = dtrain,
+    nrounds = g$nrounds,
+    nfold   = 3,
+    verbose = 0
+  )
+  results <- rbind(results,
+                   cbind(g, logloss = min(cv$evaluation_log$test_logloss_mean)))
+}
+
+results <- results[order(results$logloss), ]
+print(results)
+```
+
+
+
+# Q33. Report the optimal hyperparameter combination.
+```{r}
+# Q33. Optimal hyperparameter combination
+best <- results[1, ]
+print(best)
+
+cat("===== Optimal XGBoost Hyperparameters =====\n")
+cat(sprintf("nrounds          : %d\n",   best$nrounds))
+cat(sprintf("max_depth        : %d\n",   best$max_depth))
+cat(sprintf("eta              : %.2f\n", best$eta))
+cat(sprintf("subsample        : %.2f\n", best$subsample))
+cat(sprintf("colsample_bytree : %.2f\n", best$colsample_bytree))
+cat(sprintf("CV logloss       : %.6f\n", best$logloss))
+cat("===========================================\n")
+```
+
+
+
+
+# Q34. Generate predictions on the test set using the tuned XGBoost model.
+```{r}
+# Refit best model on FULL training set -> creates xgb_tuned
+set.seed(123)
+xgb_tuned <- xgb.train(
+  params = list(
+    objective        = "binary:logistic",
+    eval_metric      = "logloss",
+    max_depth        = best$max_depth,
+    eta              = best$eta,
+    subsample        = best$subsample,
+    colsample_bytree = best$colsample_bytree
+  ),
+  data    = dtrain,
+  nrounds = best$nrounds,
+  verbose = 0
+)
+x_test_mat <- as.matrix(test[, features])
+dtest      <- xgb.DMatrix(x_test_mat)
+
+prob_xgb <- predict(xgb_tuned, dtest)
+pred_xgb <- factor(ifelse(prob_xgb > 0.5, "Yes", "No"),
+                   levels = c("No", "Yes"))
+
+print(table(pred_xgb, test$Loan_Approved))
+
+```
+
+
+# Q35. Produce a confusion matrix for the XGBoost predictions.
+```{r}
+cm_xgb <- confusionMatrix(pred_xgb, test$Loan_Approved,
+                          positive = "Yes", mode = "prec_recall")
+
+cat("=== Confusion Matrix (XGBoost) ===\n")
+print(cm_xgb$table)
+
+cat("\n=== Overall ===\n")
+print(cm_xgb$overall)
+
+cat("\n=== By Class ===\n")
+print(cm_xgb$byClass)
+
+```
+
+
+
+
+# Q36. Compute the following metrics for the XGBoost model:
+ Accuracy
+ Precision
+ Recall
+ F1-Score
+ Specificity
+```{r}
+accuracy_xgb <- cm_xgb$overall["Accuracy"]
+precision_xgb <- cm_xgb$byClass["Precision"]
+recall_xgb <- cm_xgb$byClass["Recall"]
+f1_xgb <- cm_xgb$byClass["F1"]
+specificity_xgb <- cm_xgb$byClass["Specificity"]
+# Print
+cat(" XGBoost Performance Metrics \n")
+cat(sprintf("Accuracy    : %.4f\n", accuracy_xgb))
+cat(sprintf("Precision   : %.4f\n", precision_xgb))
+cat(sprintf("Recall      : %.4f\n", recall_xgb))
+cat(sprintf("F1-Score    : %.4f\n", f1_xgb))
+cat(sprintf("Specificity : %.4f\n", specificity_xgb))
+```
+
+
+# Q37. Plot the ROC curve for XGBoost and report the AUC value.
+```{r}
+roc_xgb <- pROC::roc(
+  response  = test$Loan_Approved,   # factor with levels No / Yes
+  predictor = prob_xgb,             # numeric probability of "Yes"
+  levels    = c("No", "Yes")
+)
+
+# Plot
+plot(roc_xgb,
+     main      = "ROC Curve - XGBoost (Tuned)",
+     col       = "darkgreen",
+     lwd       = 2,
+     print.auc = TRUE)
+
+# AUC (namespaced to avoid MLmetrics::auc conflict)
+auc_xgb <- pROC::auc(roc_xgb)
+print(paste("XGBoost AUC:", round(as.numeric(auc_xgb), 4)))
+```
+
+
+### Q38. Extract and plot the feature importance from the XGBoost model. Which feature is most
+important?
+```{r}
+#   Extract importance ----
+imp <- xgb.importance(model = xgb_tuned)
+
+#  Show the table ----
+print(imp)
+
+#  Plot ----
+xgb.plot.importance(
+  imp,
+  main       = "XGBoost Feature Importance",
+  col        = "steelblue",
+  cex        = 0.9
+)
+
+# ---- 4. Most important feature ----
+top_feature <- imp$Feature[1]
+cat("Most important feature:", top_feature, "\n")
+```
+
+
+
+# SECTION I: Model Comparison &amp; Conclusion
+### Q39. Create a comparison table of SVM vs XGBoost using all metrics computed above.
+```{r}
+# ============================================================
+# Q39. Comparison table: SVM vs XGBoost
+# ============================================================
+
+# ---- Safety: make sure AUC values are plain numerics ----
+auc_svm_num <- as.numeric(auc_svm)
+auc_xgb_num <- as.numeric(auc_xgb)
+
+comparison <- data.frame(
+  Metric  = c("Accuracy", "Precision", "Recall", "F1-Score",
+              "Specificity", "AUC"),
+  SVM     = round(c(accuracy_svm, precision_svm, recall_svm,
+                    f1_svm, specificity_svm, auc_svm_num), 4),
+  XGBoost = round(c(accuracy_xgb, precision_xgb, recall_xgb,
+                    f1_xgb, specificity_xgb, auc_xgb_num), 4)
+)
+
+print(comparison)
+
+# Optional: highlight which model wins each row
+comparison$Winner <- ifelse(comparison$SVM > comparison$XGBoost, "SVM",
+                     ifelse(comparison$XGBoost > comparison$SVM, "XGBoost",
+                            "Tie"))
+print(comparison)
+```
+
+
+## Q40. Which model performs better on this dataset? Justify with evidence.
+
+# Both models perform equally well. There is no measurable difference on the test set — every metric is identical at 1.00.
+
+However, if a single model must be chosen, the linear SVM is the better practical choice.
+
+
+- conclusion:
+SVM and XGBoost perform identically on this dataset — both achieve 100% accuracy, precision, recall, F1, specificity, and AUC. Because the target is a simple threshold on Credit_Score, the linear SVM is the preferred model: it matches XGBoost on every metric while being simpler, faster, and easier to interpret. XGBoost's extra complexity provides no benefit and only adds unnecessary risk of overfitting on future data.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

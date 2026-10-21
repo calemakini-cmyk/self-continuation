@@ -1,0 +1,577 @@
+---
+title: "Session 4 and 5 Assignment: DAta visualization and hypothesis"
+author: "MAKINI CALEB"
+date: "`r Sys.Date()`"
+output: html_document
+---
+             
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo        = TRUE,          # show the code in HTML
+  tidy        = TRUE,          # run formatR on the code
+  tidy.opts   = list(
+    comment     = FALSE,       # <-- STRIP "#" comments from displayed code
+    blank       = FALSE,       # drop blank lines
+    widthCutoff = 120          # keep long lines readable
+  ),
+  comment     = NA,            # hide the "##" prefix on output
+  warning     = FALSE,
+  message     = FALSE,
+  eval        = TRUE,
+  fig.align   = "center",
+  fig.width   = 10,
+  fig.height  = 6,
+  dpi         = 120,
+  dev         = "png",
+  fig.show    = "asis",
+  fig.keep    = "all",
+  out.width   = "100%"
+)
+                      
+```
+
+
+# setting a working directory
+```{r}
+setwd("C:/Users/ADMIN/OneDrive/Desktop/caleb makini")
+```
+
+# loading libraries
+```{r}
+library(readxl)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(knitr)
+library(kableExtra)
+```
+
+
+# Load the data
+```{r}
+df <- read_excel("jdk.xlsx", sheet = "Sheet1")
+
+# Fix the Student_ID column (rows 51-600 contain formulas like "=1+A51")
+# We'll just create a clean sequential ID
+df$Student_ID <- 1:nrow(df)
+
+# Convert categorical variables to factors
+df$Gender <- as.factor(df$Gender)
+df$Major <- as.factor(df$Major)
+df$Passed_Class <- as.factor(df$Passed_Class)
+
+# Check structure
+str(df)
+cat("Number of rows:", nrow(df), "\n")
+
+
+
+```
+
+# Question 1: Histogram of GPA
+
+```{r q1-histogram, fig.width=7, fig.height=4.5}
+ggplot(df, aes(x = GPA)) +
+  
+  geom_histogram(binwidth = 0.2,
+                 fill = "yellowgreen", 
+                 color = "blue",
+                 alpha = 0.55) +
+  
+  geom_vline(
+    aes(xintercept = mean(GPA)), 
+    color = "red",
+             linetype = "dashed", 
+    linewidth = 1) +
+  
+  labs(title = "Histogram of GPA",
+       subtitle = paste("   Red dashed line = Mean GPA =", 
+                        round(mean(df$GPA), 4)),
+       x = "GPA", y = "Frequency") +
+  
+  theme_minimal(base_size = 15)
+```
+
+```{r}
+gpa_summary <- data.frame(
+  Statistic = c("N", "Mean", "Median", "Std. Dev.", "Min", "Max", "Skewness"),
+  Value = c(
+    nrow(df),
+    round(mean(df$GPA), 4),
+    round(median(df$GPA), 4),
+    round(sd(df$GPA), 4),
+    round(min(df$GPA), 4),
+    round(max(df$GPA), 4),
+    round(mean((df$GPA - mean(df$GPA))^3) / sd(df$GPA)^3, 4)
+  )
+)
+
+kable(gpa_summary,
+      caption = "Table 1: Descriptive Statistics for GPA",
+      col.names = c("Statistic", "Value"),
+      align = c("l", "r")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                full_width = FALSE,
+                position = "center")
+```
+
+
+# Report:QUIZ 1                                                           *** Shape: - 
+-Approximately normal / roughly symmetric (skewness ≈ 0.04, very close to 0). Slight bimodal tendency due to the repeating data pattern.                ***Approximate center: Mean ≈ 3.21, Median ≈ 3.20
+
+
+
+
+# Question 2: Bar Chart of Major
+
+```{r q2-bar, fig.width=7, fig.height=4.5}
+ggplot(df, aes(x = Major, fill = Major)) +
+  geom_bar() +
+  geom_text(stat = "count", aes(label = after_stat(count)),
+            vjust = -0.5, size = 4) +
+  labs(title = "Count of Students by Major",
+       x = "Major", y = "Frequency") +
+  theme_minimal() +
+  theme(legend.position = "none")
+```
+
+
+
+
+
+
+```{r q2-table}
+major_tbl <- as.data.frame(table(df$Major))
+colnames(major_tbl) <- c("Major", "Frequency")
+major_tbl$Percentage <- round(100 * major_tbl$Frequency / sum(major_tbl$Frequency), 1)
+
+kable(major_tbl,
+      caption = "Table 2: Frequency Distribution of Major",
+      col.names = c("Major", "Frequency", "Percentage (%)"),
+      align = c("l", "r", "r")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                full_width = FALSE,
+                position = "center") %>%
+  row_spec(which.max(major_tbl$Frequency), bold = TRUE, background = "#d4edda") %>%
+  row_spec(which.min(major_tbl$Frequency), bold = TRUE, background = "#f8d7da")
+```
+
+
+### Report:QUIZ 2                                                           
+- Highest number of students: STEM ( 38.0%)               
+-Lowest number of students: Business 30.0%)
+
+
+
+# Question 3: Boxplot of Study_Hours by Gender
+
+```{r q3-boxplot, fig.width=7, fig.height=4.5}
+ggplot(df, aes(x = Gender, y = Study_Hours, fill = Gender)) +
+  geom_boxplot(alpha = 0.75, outlier.color = "red",
+               outlier.shape = 16, outlier.size = 2) +
+  labs(title = "Boxplot of Study Hours by Gender",
+       x = "Gender", y = "Study Hours") +
+  theme_minimal() +
+  theme(legend.position = "none")
+```
+
+
+```{r q3-table}
+gender_summary <- df %>%
+  group_by(Gender) %>%
+  summarise(
+    N        = n(),
+    Median   = median(Study_Hours),
+    Q1       = quantile(Study_Hours, 0.25),
+    Q3       = quantile(Study_Hours, 0.75),
+    IQR      = IQR(Study_Hours),
+    Min      = min(Study_Hours),
+    Max      = max(Study_Hours),
+    Outliers = sum(Study_Hours < quantile(Study_Hours, 0.25) - 1.5 * IQR(Study_Hours) |
+                   Study_Hours > quantile(Study_Hours, 0.75) + 1.5 * IQR(Study_Hours))
+  )
+
+kable(gender_summary,
+      caption = "Table 3: Study Hours Summary by Gender",
+      col.names = c("Gender", "N", "Median", "Q1", "Q3", "IQR",
+                    "Min", "Max", "Outliers"),
+      align = c("l", rep("r", 8))) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                full_width = FALSE,
+                position = "center")
+```
+
+
+# Report:Q3                                                              
+- Median Study Hours: Female = 14, Male = 15, Non-binary = 14               - Outliers: Using the 1.5×IQR rule, no outliers are detected in any gender group.
+
+
+
+
+
+# Question 4: Scatter Plot — Study_Hours vs GPA
+
+```{r q4-scatter, fig.width=7, fig.height=4.5}
+ggplot(df, aes(x = Study_Hours, y = GPA)) +
+  geom_point(alpha = 0.4, color = "steelblue") +
+  geom_smooth(method = "lm", color = "red", se = TRUE) +
+  labs(title = "Scatter Plot: Study Hours vs GPA",
+       subtitle = paste("Pearson r =", round(cor(df$Study_Hours, df$GPA), 3)),
+       x = "Study Hours", y = "GPA") +
+  theme_minimal()
+```
+
+
+
+```{r q4-table}
+model <- lm(GPA ~ Study_Hours, data = df)
+
+cor_tbl <- data.frame(
+  Metric = c("Pearson correlation (r)", "R-squared",
+             "Intercept", "Slope (Study_Hours)", "p-value (slope)"),
+  Value = c(
+    round(cor(df$Study_Hours, df$GPA), 4),
+    round(summary(model)$r.squared, 4),
+    round(coef(model)[1], 4),
+    round(coef(model)[2], 4),
+    format(summary(model)$coefficients[2, 4], scientific = TRUE)
+  )
+)
+
+kable(cor_tbl,
+      caption = "Table 4: Correlation and Regression Results (GPA ~ Study_Hours)",
+      col.names = c("Metric", "Value"),
+      align = c("l", "r")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                full_width = FALSE,
+                position = "center")
+```
+
+
+### Report:Q4
+- Direction: Positive — as Study_Hours increases, GPA increases.     - Strength: Very strong positive relationship (r ≈ 0.931, R² ≈ 0.867). - Trendline: GPA = 1.852 + 0.086 × Study_Hours. Each additional study hour is associated with a 0.086-point increase in GPA.
+
+
+
+
+
+## PART 2: HYPOTHESIS TESTING
+
+### Question 5: One-Sample T-Test — GPA vs 3.0
+
+```{r q5-ttest}
+t_test_gpa <- t.test(df$GPA, mu = 3.0, alternative = "two.sided")
+print(t_test_gpa)
+```
+
+
+
+
+```{r q5-table}
+q5_tbl <- data.frame(
+  Item = c("Null Hypothesis (H0)", "Alternative Hypothesis (H1)",
+           "Sample Mean", "t-statistic", "Degrees of Freedom",
+           "p-value", "95% CI Lower", "95% CI Upper",
+           "Decision (alpha = 0.05)"),
+  Value = c("mu = 3.0", "mu != 3.0",
+            round(mean(df$GPA), 4),
+            round(t_test_gpa$statistic, 4),
+            t_test_gpa$parameter,
+            format(t_test_gpa$p.value, scientific = TRUE),
+            round(t_test_gpa$conf.int[1], 4),
+            round(t_test_gpa$conf.int[2], 4),
+            "Reject H0")
+)
+
+kable(q5_tbl,
+      caption = "Table 5: One-Sample T-Test Results (GPA vs 3.0)",
+      col.names = c("Item", "Value"),
+      align = c("l", "r")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                full_width = FALSE,
+                position = "center") %>%
+  row_spec(9, bold = TRUE, background = "#d4edda")
+```
+
+
+
+###Report:                                                                    ***H₀: μ = 3.0 — The mean GPA is equal to 3.0.                                ***H₁: μ ≠ 3.0 — The mean GPA is significantly different from 3.0.        ***Sample mean: 3.2099 | t-statistic: 10.939 | p-value: < 0.0001    ***Conclusion: Since p < 0.05, we reject H₀. The mean GPA is significantly higher than 3.0.
+
+
+
+
+## Question 6: Two-Sample T-Test — Study_Hours by Gender (Male vs Female)
+
+```{r q6-ttest}
+df_gender <- df %>% 
+  filter(Gender %in% c("Male", "Female"))
+t_test_gender <- t.test(Study_Hours ~ Gender, data = df_gender,
+                        alternative = "two.sided", var.equal = FALSE)
+print(t_test_gender)
+```
+
+
+```{r q6-table}
+q6_means <- df_gender %>%
+  group_by(Gender) %>%
+  summarise(N = n(),
+            Mean = round(mean(Study_Hours), 4),
+            SD   = round(sd(Study_Hours), 4))
+
+kable(q6_means,
+      caption = "Table 6a: Group Statistics for Study Hours by Gender",
+      col.names = c("Gender", "N", "Mean Study Hours", "Std. Dev."),
+      align = c("l", "r", "r", "r")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                full_width = FALSE, position = "center")
+
+q6_tbl <- data.frame(
+  Item = c("Null Hypothesis (H0)", "Alternative Hypothesis (H1)",
+           "t-statistic", "Degrees of Freedom", "p-value",
+           "95% CI Lower", "95% CI Upper", "Decision (alpha = 0.05)"),
+  Value = c("mu_Male = mu_Female", "mu_Male != mu_Female",
+            round(t_test_gender$statistic, 4),
+            round(t_test_gender$parameter, 2),
+            round(t_test_gender$p.value, 4),
+            round(t_test_gender$conf.int[1], 4),
+            round(t_test_gender$conf.int[2], 4),
+            "Fail to Reject H0")
+)
+
+kable(q6_tbl,
+      caption = "Table 6b: Independent Two-Sample T-Test Results",
+      col.names = c("Item", "Value"),
+      align = c("l", "r")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                full_width = FALSE, position = "center") %>%
+  row_spec(8, bold = TRUE, background = "#fff0cd")
+```
+
+
+
+##Report:                                                                  
+- H₀: μ_Male = μ_Female (no difference in mean study hours)                - H₁: μ_Male ≠ μ_Female (significant difference exists)                  - Group means: Female = 14.087, Male = 13.913                      - t-statistic: 0.4611 | p-value: 0.6449                            - Conclusion: Since p = 0.6449 > 0.05, we fail to reject H₀. There is not enough evidence at the 5% level to conclude a significant difference. (Note: marginally non-significant — would be significant at α = 0.10.)
+
+
+
+
+
+
+## Question 7: Paired T-Test — Pre_Test_Score vs Post_Test_Score
+```{r q7-ttest}
+t_test_paired <- t.test(df$Post_Test_Score, df$Pre_Test_Score,
+                        paired = TRUE, alternative = "two.sided")
+print(t_test_paired)
+```
+
+
+
+```{r q7-table}
+diff_scores <- df$Post_Test_Score - df$Pre_Test_Score
+
+q7_means <- data.frame(
+  Test = c("Pre_Test_Score", "Post_Test_Score", "Difference (Post - Pre)"),
+  Mean = c(round(mean(df$Pre_Test_Score), 4),
+           round(mean(df$Post_Test_Score), 4),
+           round(mean(diff_scores), 4)),
+  SD = c(round(sd(df$Pre_Test_Score), 4),
+         round(sd(df$Post_Test_Score), 4),
+         round(sd(diff_scores), 4))
+)
+
+kable(q7_means,
+      caption = "Table 7a: Paired Test Score Summary",
+      col.names = c("Test", "Mean", "Std. Dev."),
+      align = c("l", "r", "r")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                full_width = FALSE, position = "center")
+
+q7_tbl <- data.frame(
+  Item = c("Null Hypothesis (H0)", "Alternative Hypothesis (H1)",
+           "Mean Difference", "t-statistic", "Degrees of Freedom",
+           "p-value", "95% CI Lower", "95% CI Upper",
+           "Decision (alpha = 0.05)"),
+  Value = c("mu_diff = 0", "mu_diff != 0",
+            round(mean(diff_scores), 4),
+            round(t_test_paired$statistic, 4),
+            t_test_paired$parameter,
+            format(t_test_paired$p.value, scientific = TRUE),
+            round(t_test_paired$conf.int[1], 4),
+            round(t_test_paired$conf.int[2], 4),
+            "Reject H0")
+)
+
+kable(q7_tbl,
+      caption = "Table 7b: Paired T-Test Results",
+      col.names = c("Item", "Value"),
+      align = c("l", "r")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                full_width = FALSE, position = "center") %>%
+  row_spec(9, bold = TRUE, background = "#d4edda")
+```
+
+
+
+### Report:   
+- H₀: μ_diff = 0 (no significant difference between Pre and Post scores)   - H₁: μ_diff ≠ 0 (significant difference — scores improved)              - Mean Difference: +8.64 points                                  - t-statistic: 90.4102 | p-value: < 0.0001                          - Conclusion: Since p < 0.05, we reject H₀. Test scores improved significantly from Pre to Post (+8.64 points on average).
+
+
+
+
+## Question 8: Chi-Square Test of Independence — Major vs Passed_Class
+
+```{r q8-chisq}
+contingency_table <- table(df$Major, df$Passed_Class)
+chi_test <- chisq.test(contingency_table)
+print(chi_test)
+print(round(chi_test$expected, 2))
+```
+
+```{r q8-table}
+# Observed contingency table
+obs_tbl <- as.data.frame.matrix(contingency_table)
+obs_tbl <- cbind(Major = rownames(obs_tbl), obs_tbl)
+rownames(obs_tbl) <- NULL
+
+kable(obs_tbl,
+      caption = "Table 8a: Observed Contingency Table (Major x Passed_Class)",
+      col.names = c("Major", "No", "Yes"),
+      align = c("l", "r", "r")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                full_width = FALSE, position = "center")
+
+# Expected contingency table
+exp_tbl <- as.data.frame.matrix(round(chi_test$expected, 2))
+exp_tbl <- cbind(Major = rownames(exp_tbl), exp_tbl)
+rownames(exp_tbl) <- NULL
+
+kable(exp_tbl,
+      caption = "Table 8b: Expected Contingency Table",
+      col.names = c("Major", "No", "Yes"),
+      align = c("l", "r", "r")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                full_width = FALSE, position = "center")
+
+# Cramer's V
+cramers_v <- sqrt(as.numeric(chi_test$statistic) /
+                  (sum(contingency_table) * (min(dim(contingency_table)) - 1)))
+
+q8_tbl <- data.frame(
+  Item = c("Null Hypothesis (H0)", "Alternative Hypothesis (H1)",
+           "Chi-square statistic", "Degrees of Freedom", "p-value",
+           "Cramer's V", "Decision (alpha = 0.05)"),
+  Value = c("Major and Passed_Class are independent",
+            "Major and Passed_Class are associated",
+            round(as.numeric(chi_test$statistic), 4),
+            as.numeric(chi_test$parameter),
+            format(chi_test$p.value, scientific = TRUE),
+            round(cramers_v, 4),
+            "Reject H0")
+)
+
+kable(q8_tbl,
+      caption = "Table 8c: Chi-Square Test Results",
+      col.names = c("Item", "Value"),
+      align = c("l", "r")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                full_width = FALSE, position = "center") %>%
+  row_spec(7, bold = TRUE, background = "#d4edda")
+```
+
+
+### Report:
+
+- H₀: Major and Passed_Class are independent (no association)
+
+- H₁: Major and Passed_Class are associated (dependent)
+
+- Chi-square statistic: χ² = 1155.5556 | df: 2 | p-value: < 0.0001
+
+- Cramer's V: 0.5092 (moderate-to-strong association)
+
+- Conclusion: Since p < 0.05, we reject H₀. There is a significant association between Major and Passed_Class. Only Business students failed (26.7%), while all STEM and Humanities students passed.
+
+
+
+
+
+### Summary Table of All Hypothesis Tests
+
+```{r summary-table}
+summary_tbl <- data.frame(
+  Question = c("Q5", "Q6", "Q7", "Q8"),
+  Comparison = c("GPA vs 3.0",
+                 "Study Hours: Male vs Female",
+                 "Pre vs Post Test Score",
+                 "Major vs Passed_Class"),
+  Test = c("One-sample t-test",
+           "Two-sample t-test (Welch)",
+           "Paired t-test",
+           "Chi-square test"),
+  Statistic  = c(
+    paste0("t = ", round(as.numeric(t_test_gpa$statistic), 4)),
+    paste0("t = ", round(as.numeric(t_test_gender$statistic), 4)),
+    paste0("t = ", round(as.numeric(t_test_paired$statistic), 4)),
+    paste0("chi-sq = ", round(as.numeric(chi_test$statistic), 4))
+  ),
+  df = c(
+    as.numeric(t_test_gpa$parameter),
+    round(as.numeric(t_test_gender$parameter), 2),
+    as.numeric(t_test_paired$parameter),
+    as.numeric(chi_test$parameter)
+  ),
+  p_value = c(
+    format(t_test_gpa$p.value, scientific = TRUE),
+    round(t_test_gender$p.value, 4),
+    format(t_test_paired$p.value, scientific = TRUE),
+    format(chi_test$p.value, scientific = TRUE)
+  ),
+  Decision = c(
+    ifelse(t_test_gpa$p.value < 0.05, "Reject H0", "Fail to Reject H0"),
+    ifelse(t_test_gender$p.value < 0.05, "Reject H0", "Fail to Reject H0"),
+    ifelse(t_test_paired$p.value < 0.05, "Reject H0", "Fail to Reject H0"),
+    ifelse(chi_test$p.value < 0.05, "Reject H0", "Fail to Reject H0")
+  ),
+  stringsAsFactors = FALSE
+)
+
+# Color rows based on decision
+row_colors <- ifelse(summary_tbl$Decision == "Reject H0", "#d4edda", "#fff3cd")
+
+kable(summary_tbl,
+      caption = "Table 9: Summary of All Hypothesis Tests (alpha = 0.05) — Auto-Populated",
+      col.names = c("Question", "Comparison", "Test", "Statistic",
+                    "df", "p-value", "Decision"),
+      align = c("c", "l", "l", "r", "r", "r", "l")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                full_width = FALSE, position = "center") %>%
+  row_spec(1, background = row_colors[1]) %>%
+  row_spec(2, background = row_colors[2]) %>%
+  row_spec(3, background = row_colors[3]) %>%
+  row_spec(4, background = row_colors[4])
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,1040 @@
+---
+title: 'DATASET 2: UNIVERSITY ENROLMENT RATE (Regression)'
+author: "MAKINI CALEB"
+date: "`r Sys.Date()`"
+output: html_document
+---
+             
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo        = TRUE,          # show the code in HTML
+  tidy        = TRUE,          # run formatR on the code
+  tidy.opts   = list(
+    comment     = FALSE,       # <-- STRIP "#" comments from displayed code
+    blank       = FALSE,       # drop blank lines
+    widthCutoff = 120          # keep long lines readable
+  ),
+  comment     = NA,            # hide the "##" prefix on output
+  warning     = FALSE,
+  message     = FALSE,
+  eval        = TRUE,
+  fig.align   = "center",
+  fig.width   = 10,
+  fig.height  = 6,
+  dpi         = 120,
+  dev         = "png",
+  fig.show    = "asis",
+  fig.keep    = "all",
+  out.width   = "100%"
+)
+                      
+```
+
+# SETTING A WORKING DIRECTORY
+```{r}
+ setwd("C:/Users/ADMIN/OneDrive/Desktop/caleb makini")
+
+```
+
+
+# load libraries
+```{r}
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(ggthemes)
+library(psych)
+library(sjmisc)
+library(kableExtra)
+library(knitr)
+library(tidyr)
+library(reshape2)
+library(formatR)
+library(corrplot)
+library(e1071)
+library(caret)
+library(Metrics)
+library(xgboost)
+
+```
+
+# Section A:
+# load dataset
+## Q1: Report number of rows
+```{r}
+data<-read.csv("Enrollment Rate.csv")
+cat("Number of rows:", nrow(data), "\n")
+cat("Number of columns:",ncol(data),"\n")
+```
+
+# Q2: check structure
+```{r}
+str(data)
+data$GDP_per_Capita<-as.numeric(data$GDP_per_Capita)
+cat("\n Report: All columns should be numeric/integer. Year is integer, others numeric.")
+```
+
+
+# Q3: Check and remove for and duplicate
+```{r}
+dup_idx <- duplicated(data)
+
+if (sum(dup_idx) == 0) {
+  cat("No duplicates in any numerical variable.\n")
+} else {
+  cat("Number of duplicated rows:", sum(dup_idx), "\n")
+  print(data[dup_idx, , drop = FALSE])
+}
+
+```
+
+
+# Q4: use iqr method to identify outliers
+ 
+## detection using 1.5 IQR
+```{r}
+detect_outliers_IQR <- function(x) {
+  Q1 <- quantile(x, 0.25, na.rm = TRUE)
+  Q3 <- quantile(x, 0.75, na.rm = TRUE)
+  IQR_val <- Q3 - Q1
+  lower <- Q1 - 1.5 * IQR_val
+  upper <- Q3 + 1.5 * IQR_val
+  which(x < lower | x > upper)
+}
+
+# Call the function on the column
+outlier_idx <- detect_outliers_IQR(data$GDP_per_Capita)
+
+# Values of the outliers
+outliers_gdp <- data$GDP_per_Capita[outlier_idx]
+
+outs <- outlier_idx[outlier_idx > 0]
+if (length(outs) == 0) {
+  cat("No outliers detected in any numerical variable.\n
+      Since no outliers, We Keep all values.")
+} else {
+  cat("Outliers detected:\n")
+  print(outs)
+}
+
+
+```
+
+# SECTION B: Missing-Value Treatment
+## Q5. Count missing values per column and impute the missing values.
+### check for missiing values 
+```{r}
+mval_per_col<-colSums(is.na(data))
+misss <- mval_per_col[mval_per_col > 0]
+if (length(misss) == 0) {
+  cat("No missing values detected in any numerical variable.\n
+      Hence no imputation of the missing values.")
+} else {
+  cat("Missing values detected:\n")
+  print(misss)
+}
+
+```
+
+# Q6: Verification that no missing values exists
+```{r}
+if (length(misss) == 0) {
+  cat("No missing values detected in any numerical variable.\n
+      Hence Verified.")
+} else {
+  cat("Missing values detected:\n")
+  print(misss)
+}
+
+```
+
+# SECTION C: Descriptive Statistics
+## Q7. Compute mean, median, standard deviation, min, max, and IQR for all numerical variables.
+```{r}
+# select numerical variables
+num_vars <- c("Year", "GDP_per_Capita", "Education_Spending",
+              "Unemployment_Rate", "Population_Young", "Enrolment_Rate")
+
+# compute the mean, sd, min, max, and iqr for all numeric variables
+num_vars <- data %>% select(where(is.numeric))
+desc_stats <- num_vars %>%
+  summarise(across(everything(),
+                   list(
+    mean = ~mean(.x, na.rm=TRUE),
+    median = ~median(.x, na.rm=TRUE),
+    sd = ~sd(.x, na.rm=TRUE),
+    min = ~min(.x, na.rm=TRUE),
+    max = ~max(.x, na.rm=TRUE),
+    IQR = ~IQR(.x, na.rm=TRUE)
+  )))%>%
+  
+  pivot_longer(
+    everything(),
+    names_to  = c("variable", "stat"),
+    names_sep = "_(?=[^_]+$)"   # split at the LAST underscore
+  ) %>%
+  
+  pivot_wider(names_from = stat, values_from = value) %>%
+  arrange(variable)
+
+desc_stats
+```
+
+
+# Q8. Compute skewness and kurtosis for each variable. Interpret the results.
+```{r}
+library(e1071)
+
+skew_kurt <- num_vars %>%
+  summarise(across(everything(), 
+                   list(
+    skewness =~skewness(.x, na.rm = TRUE),
+    kurtosis =~kurtosis(.x, na.rm = TRUE)
+  )))%>%
+  pivot_longer(
+    everything(),
+    names_to  = c("variable", "stat"),
+    names_sep = "_(?=[^_]+$)"   # split at the LAST underscore
+  ) %>%
+pivot_wider(names_from = stat, values_from = value) %>%
+  arrange(variable)
+
+skew_kurt
+```
+
+- All six variables are roughly symmetric (skewness close to 0) and have negative kurtosis (around −1), meaning flat, thin-tailed distributions with no serious outliers. So the data are well-behaved: no transformation is needed, Pearson correlation is appropriate, and standard models can be used directly.
+
+
+# Q9:What is the range of `Enrolment_Rate`? Is there sufficient variance for regression modeling?
+```{r}
+target <- "Enrolment_Rate"
+predictors <- c("GDP_per_Capita", "Education_Spending",
+                "Unemployment_Rate", "Population_Young")
+
+cat("Range:", range(data[[target]]), "\n")
+
+```
+- Enrolment_Rate ranges from 28.4 to 80.0 (≈52-point spread), providing ample variance for regression.
+- no boundary compression, no skew distortion 
+- so it is suitable as a target or predictor, provided sample size and linearity are also adequate.
+
+# system wise
+```{r}
+predictors <- c("GDP_per_Capita", "Education_Spending",
+                "Unemployment_Rate", "Population_Young")
+target <- "Enrolment_Rate"
+```
+
+
+# Q10. Compute the correlation matrix. Which feature has the strongest positive correlation with
+`Enrolment_Rate`? Which has the strongest negative?
+```{r}
+# Q10 — correlation matrix
+
+
+# Coerce to numeric where possible
+data[] <- lapply(data, function(x) {
+  if (is.character(x) || is.factor(x))
+    suppressWarnings(as.numeric(gsub("[^0-9.-]", "", as.character(x))))
+  else x
+})
+
+# Numeric columns only
+num_s   <- names(data)[sapply(data, is.numeric)]
+cor_mat <- cor(data[, num_s, drop = FALSE], use = "pairwise.complete.obs")
+
+# Correlations with the target
+target_cor <- sort(cor_mat[target, num_s != target], decreasing = TRUE)
+print(round(target_cor, 4))
+
+cat("Strongest positive:", names(target_cor)[1],
+    "=", round(target_cor[1], 4), "\n")
+cat("Strongest negative:", names(target_cor)[length(target_cor)],
+    "=", round(target_cor[length(target_cor)], 4), "\n")
+```
+
+
+
+
+# SECTION D: Visualization
+## Q11. Plot `Enrolment_Rate` against `Year` as a line chart. Describe the trend and identify any structural
+breaks (e.g., 2009, 2020).
+```{r}
+ggplot(data, aes(x = Year, y = Enrolment_Rate)) +
+  geom_line(alpha = 0.4, color = "grey40") +
+  geom_point(color = "yellowgreen") +
+  geom_smooth(method = "loess", se = TRUE, color = "darkorange", fill = "tomato", alpha = 0.2) +
+  geom_vline(xintercept = c(2009, 2020), linetype = "dashed", color = "red") +
+  labs(title = "Enrolment Rate over Time with LOESS Trend",
+       x = "Year", y = "Enrolment Rate (%)") +
+  theme_minimal()
+```
+
+
+# Q12. Create scatter plots of each feature against `Enrolment_Rate`. Which relationships appear
+nonlinear?
+```{r}
+data_long <- data %>%
+  select(all_of(predictors), all_of(target)) %>%   # <- all_of(predictors)
+  pivot_longer(
+    cols      = -all_of(target),
+    names_to  = "feature",
+    values_to = "value"
+  )
+
+ggplot(data_long, aes(x = value, y = .data[[target]])) +
+  geom_point(alpha = 0.5, color = "steelblue") +
+  geom_smooth(method = "lm",    se = FALSE, color = "red",
+              linetype = "dashed", size = 0.6) +     # <- size, not linewidth
+  geom_smooth(method = "loess", se = TRUE,  color = "darkorange",
+              size = 0.8) +
+  facet_wrap(~ feature, scales = "free_x") +
+  labs(
+    title = paste(target, "vs Each Feature"),
+    x     = NULL,
+    y     = target
+  ) +
+  theme_minimal()
+```
+
+
+
+# Q13. Create a correlation heatmap. Which pairs of features are highly correlated?
+```{r}
+## Correlation matrix on the actual data frame
+cor_vars <- c(predictors, target)
+cor_mat  <- cor(data[, cor_vars], use = "pairwise.complete.obs",
+                method = "pearson")
+
+# Long format for ggplot
+cor_long <- melt(cor_mat)
+names(cor_long) <- c("Var1", "Var2", "value")
+
+# Heatmap
+ggplot(cor_long, aes(Var1, Var2, fill = value)) +
+  geom_tile(color = "white") +
+  geom_text(aes(label = round(value, 2)), size = 3) +
+  scale_fill_gradient2(
+    low      = "firebrick",
+    mid      = "white",
+    high     = "steelblue",
+    midpoint = 0,
+    limits   = c(-1, 1),
+    name     = "r"
+  ) +
+  coord_fixed() +
+  labs(
+    title = "Q13: Correlation Heatmap of Features",
+    x = NULL, y = NULL
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+
+# SECTION E — Scaling
+## Q16. Why is standardization essential for SVM regression? 
+
+### SVR with an RBF kernel computes distances between points as exp(-γ‖xᵢ − xⱼ‖²). The Euclidean norm ‖·‖² is scale-sensitive:
+
+- A variable measured in thousands (e.g. GDP_per_Capita) contributes ~10⁶ × more to the distance than a variable on a 0–1 scale (e.g. Literacy_Rate).
+
+- The kernel then effectively ignores small-scale features → the model is dominated by large-scale ones.
+
+- The regularization term ‖w‖² in the SVR objective is also scale-dependent; the optimal C shifts with feature scaling.
+
+### Standardizing (z-score) puts every feature on the same footing, so:
+
+- The RBF kernel treats all features equally.
+
+- Hyperparameters C, γ, ε are comparable across datasets.
+
+- Gradient-based optimisation converges faster and more stably.
+
+- Verdict: Standardization is mandatory for SVR with RBF (and strongly recommended even for linear SVR).
+
+
+
+
+
+# Q17. Standardize all predictor variables. Show the first 5 rows of the scaled data.
+```{r}
+# Numeric features only, target excluded
+predictors <- data %>%
+  select(where(is.numeric)) %>%
+  select(-all_of(target))
+
+# z-score standardization: (x - mean) / sd
+scaled_features <- as.data.frame(scale(predictors))
+
+# First 5 rows
+head(scaled_features, 5)
+```
+
+
+# Q18. Verify the scaled features have mean 0 and standard deviation 1.
+```{r}
+cat("===== Means (≈ 0) =====\n")
+print(round(colMeans(scaled_features), 6))
+
+cat("\n===== Standard deviations (≈ 1) =====\n")
+print(round(apply(scaled_features, 2, sd), 6))
+```
+
+# Q19. Should XGBoost be trained on scaled or unscaled data? Justify.
+
+XGBoost does not require scaling — train on the unscaled data.
+
+Justification:
+
+Tree-based splits are monotonic. XGBoost builds decision trees by splitting on thresholds (x < t). Any monotonic transformation (linear scaling, log, sqrt) produces the same split points in a different coordinate system → identical tree structure.
+
+No distance metric. Unlike SVR / kNN / neural nets, XGBoost doesn't compute Euclidean distances — it doesn't care that GDP_per_Capita ranges over thousands while Literacy_Rate ranges over 0–100.
+
+Gradient computation is per-feature. Split gains are computed on the ranks of the feature values, not their magnitudes.
+
+Interpretability. Feature importance, partial dependence, and SHAP values are far easier to read on the original scale (e.g. "GDP per $1,000" rather than "per 0.4 sd").
+
+Regularization λ, γ in XGBoost act on leaf weights and tree complexity, not on input scale — so scaling doesn't change their meaning either.
+
+Caveats where scaling does help XGBoost slightly:
+
+Sparse / very-high-dimensional data (histogram binning is more efficient).
+
+When using linear boosters (booster = "gblinear") — those do need scaling.
+
+Verdict: Use unscaled features for XGBoost. Use scaled features for SVR. Keep the two pipelines separate.
+
+
+# SECTION F: Train/Test Partitioning
+## Q20. Since the data is chronological, perform a time-based split rather than a random split.
+```{r}
+data_sorted <- data %>% arrange(Year)
+
+# 80/20 chronological split
+n       <- nrow(data_sorted)
+cutoff  <- floor(0.8 * n)
+train   <- data_sorted[1:cutoff, ]
+test    <- data_sorted[(cutoff + 1):n, ]
+
+# Report the year ranges
+
+split_summary <- data.frame(
+  Set       = c("Train", "Test"),
+  StartYear = c(min(train$Year), min(test$Year)),
+  EndYear   = c(max(train$Year), max(test$Year)),
+  N         = c(nrow(train),     nrow(test))
+)
+print(split_summary)
+
+```
+
+## Q21. Why is a time-based split more appropriate than a random split for this dataset?
+### Random split
+- Leakage: Future years sneak into training → optimistic test score
+- Real use case: You never forecast by shuffling years
+- Autocorrelation: Adjacent years are highly correlated; random split puts 2020 in train and 2019 in test → trivially easy
+- Structural breaks: 2020 COVID break gets scattered across both sets → break effect muted
+- Stationarity: Assumes i.i.d. observations
+
+### Time-based split
+- Leakage: Test is strictly future → realistic estimate
+- Real use case: You always forecast forward in time
+- Autocorrelation: Temporal order preserved
+- Structural breaks: Break falls entirely in test → model's robustness tested honestly
+- Stationarity: Respects the non-i.i.d. nature of time series
+Random splitting on chronological data causes data leakage — the model sees the future during training and reports inflated accuracy on the test set. A time-based split mirrors the real forecasting task and gives an honest generalisation estimate.
+
+# SECTION G: SVM Regression (SVR)
+## Q22. Train an SVR model with an RBF kernel on the scaled training data using default hyperparameters.
+```{r}
+predictors <- c("GDP_per_Capita", "Education_Spending",
+                "Unemployment_Rate", "Population_Young")
+target <- "Enrolment_Rate"
+# split data
+set.seed(123)
+split_svm<-createDataPartition(data$Enrolment_Rate, p=0.8, list=FALSE)
+train_dt<-data[split_svm, ]
+test_dt<-data[-split_svm, ]
+# dimension
+dim(train_dt)
+dim(test_dt)
+
+# separate predictors and targets
+x_train<- train_dt[, predictors]
+y_train<-train_dt[[target]]
+
+x_test<-test_dt[, predictors]
+y_test<-test_dt[[target]]
+# standardization
+
+
+preProc<- preProcess(x_train,
+                      method =c("center", "scale"))
+                     
+                     x_train_scale<-predict(preProc, x_train)
+                     x_test_scale<-predict(preProc, x_test)
+
+# train SVM model
+svm_model<-svm(x=x_train_scale,
+              y=y_train,
+              type="eps-regression",
+              kernel="radial")
+# view model
+print(svm_model)
+
+```
+
+# Q23. Tune the hyperparameters:
+ `C`
+ `epsilon`
+ `gamma`
+```{r}
+set.seed(123)
+tune_svr <- tune.svm(
+  x = x_train_scale, y = y_train,
+  type = "eps-regression", kernel = "radial", scale = FALSE,
+  cost    = c(0.1, 1, 10, 100, 1000),
+  epsilon = c(0.01, 0.05, 0.1, 0.2, 0.5),
+  gamma   = c(0.001, 0.01, 0.05, 0.1, 0.5, 1)
+)
+best_svr <- tune_svr$best.model
+print(best_svr$cost); print(best_svr$epsilon); print(best_svr$gamma)
+```
+
+# Q24. Compare RBF kernel vs Linear kernel for SVR. Which performs better?
+```{r}
+n <- length(y_test); p <- length(predictors)
+
+# RBF
+pred_rbf <- predict(best_svr, x_test_scale)
+mae_rbf  <- mean(abs(y_test - pred_rbf))
+mse_rbf  <- mean((y_test - pred_rbf)^2)
+rmse_rbf <- sqrt(mse_rbf)
+r2_rbf   <- 1 - sum((y_test - pred_rbf)^2) / sum((y_test - mean(y_test))^2)
+adj_rbf  <- 1 - (1 - r2_rbf) * (n - 1) / (n - p - 1)
+mape_rbf <- mean(abs((y_test - pred_rbf) / y_test)) * 100
+
+# Linear
+set.seed(123)
+svr_linear  <- svm(x_train_scale, y_train,
+                   type = "eps-regression", kernel = "linear", scale = FALSE)
+pred_linear <- predict(svr_linear, x_test_scale)
+mae_lin  <- mean(abs(y_test - pred_linear))
+mse_lin  <- mean((y_test - pred_linear)^2)
+rmse_lin <- sqrt(mse_lin)
+r2_lin   <- 1 - sum((y_test - pred_linear)^2) / sum((y_test - mean(y_test))^2)
+adj_lin  <- 1 - (1 - r2_lin) * (n - 1) / (n - p - 1)
+mape_lin <- mean(abs((y_test - pred_linear) / y_test)) * 100
+
+# Compare
+comparison <- data.frame(
+  Kernel = c("RBF", "Linear"),
+  MAE    = c(mae_rbf, mae_lin),
+  MSE    = c(mse_rbf, mse_lin),
+  RMSE   = c(rmse_rbf, rmse_lin),
+  R2     = c(r2_rbf, r2_lin),
+  Adj_R2 = c(adj_rbf, adj_lin),
+  MAPE   = c(mape_rbf, mape_lin)
+)
+print(comparison, row.names = FALSE, digits = 4)
+
+cat("\nBest RMSE:", comparison$Kernel[which.min(comparison$RMSE)], "\n")
+cat("Best R²  :", comparison$Kernel[which.max(comparison$R2)],   "\n")
+```
+- The tuned RBF kernel achieved an apparently perfect fit (R² ≈ 1.000, MAE ≈ 0.01), but such a result is implausible on held-out data and indicates overfitting or leakage. The linear kernel gave a realistic and still very strong result (R² = 0.9987, RMSE = 0.57). Given the near-linear relationship between Enrolment_Rate and the predictors, the linear kernel is preferred for its simplicity and credibility."
+
+
+# Q25. Generate predictions on the test set using the best SVR model.
+```{r}
+# ---- Predict ----
+pred_svr <- as.numeric(predict(best_svr, x_test_scale))
+
+head(pred_svr)
+
+```
+
+# Q26. Compute the following for SVR:
+ MAE (Mean Absolute Error)
+ MSE (Mean Squared Error)
+ RMSE (Root Mean Squared Error)
+ R² (Coefficient of Determination)
+ Adjusted R²
+ MAPE (Mean Absolute Percentage Error)
+
+```{r}
+y_true <- y_test
+n <- length(y_true)
+p <- length(predictors)
+MAE   <- mean(abs(y_true - pred_svr))
+MSE   <- mean((y_true - pred_svr)^2)
+RMSE  <- sqrt(MSE)
+R2    <- 1 - sum((y_true - pred_svr)^2) / sum((y_true - mean(y_true))^2)
+AdjR2 <- 1 - (1 - R2) * (n - 1) / (n - p - 1)
+MAPE  <- mean(abs((y_true - pred_svr) / y_true)) * 100
+
+# ---- Report ----
+
+MSE   <- mean((y_true - pred_svr)^2)
+RMSE  <- sqrt(MSE)
+metrics_svr <- data.frame(
+  Metric = c("MAE", "MSE", "RMSE", "R2", "Adjusted_R2", "MAPE (%)"),
+  Value  = c(MAE, MSE, RMSE, R2, AdjR2, MAPE)
+)
+print(metrics_svr, row.names = FALSE, digits = 4)
+```
+
+
+# Q27. Plot actual vs predicted values for the test set. How close are the predictions?
+```{r}
+plot_df <- data.frame(Actual = y_test, Predicted = pred_svr)
+stopifnot(nrow(plot_df) == nrow(x_test))
+
+ggplot(plot_df, aes(Actual, Predicted)) +
+  geom_point(color = "steelblue", size = 2.5, alpha = 0.8) +
+  geom_abline(slope = 1, intercept = 0,
+              color = "red", linetype = "dashed", linewidth = 1) +
+  labs(title = "Q27: SVR — Actual vs Predicted",
+       x = "Actual Enrolment Rate",
+       y = "Predicted Enrolment Rate") +
+  theme_minimal()
+
+```
+
+
+
+
+
+#Q28. Plot the residuals of the SVR model. Are there any patterns suggesting model inadequacy?
+```{r}
+# Residuals (rebuild from current objects to be safe)
+pred_svr <- as.numeric(predict(best_svr, x_test_scale))
+y_true   <- as.numeric(test$Enrolment_Rate)
+resid    <- y_true - pred_svr
+
+stopifnot(length(resid) == length(pred_svr))
+
+# ---- Plot 1: Residuals vs Predicted ----
+res_df <- data.frame(Predicted = pred_svr, Residuals = resid)
+
+ggplot(res_df, aes(Predicted, Residuals)) +
+  geom_point(color = "darkorange", size = 2.5, alpha = 0.8) +
+  geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
+  geom_smooth(method = "loess", se = FALSE, color = "blue", linewidth = 0.8) +
+  labs(title = "Q28: SVR Residuals vs Predicted",
+       x = "Predicted", y = "Residual (Actual - Predicted)") +
+  theme_minimal()
+
+# ---- Plot 2: Histogram of residuals ----
+ggplot(res_df, aes(Residuals)) +
+  geom_histogram(bins = 20, fill = "steelblue", color = "white") +
+  geom_vline(xintercept = 0, color = "red", linetype = "dashed") +
+  labs(title = "Q28: Distribution of SVR Residuals",
+       x = "Residual", y = "Count") +
+  theme_minimal()
+
+```
+- Yes — the residual plot reveals a clear pattern that strongly indicates model inadequacy.
+- Because the residuals are systematically positive at the extremes and negative in the middle, they are not random — they are a function of the predicted value. This violates the core assumption of regression residuals
+(random noise centered on zero).
+
+## conclusion
+- he SVR residuals show a pronounced U-shaped pattern (positive at the extremes, negative in the middle), indicating systematic bias and a failure to capture the nonlinear structure of the data. The model is inadequate
+
+
+# SECTION H: XGBoost Regression
+## Q29. Train an XGBoost regression model with default parameters.
+# split data into training and testing 
+```{r}
+split_index<-createDataPartition(data$Enrolment_Rate, p=0.8, list=FALSE)
+train<-data[split_index, ]
+test<-data[-split_index, ]
+
+# create a training matrix
+
+train_x<-as.matrix(train[, predictors])
+test_x<-as.matrix(test[, predictors])
+train_y<-train[[target]]
+test_y<-test[[target]]
+
+# convert to dmatrix
+dtrain <- xgb.DMatrix(data = train_x, label = train_y)
+dtest  <- xgb.DMatrix(data = test_x,  label = test_y)
+
+params<- list(
+  objective="reg:squarederror",
+  eval_metric="rmse",
+  eta=0.10,
+  max.depth=5,
+  subsample= 0.8,
+  colsample_bytree=0.8
+  
+)
+# Train
+xgb_model <- xgb.train(
+  params    = params,
+  data      = dtrain,
+  nrounds   = 10,
+  watchlist = list(train = dtrain, test = dtest),
+  verbose   = 1
+)
+```
+
+# Q30. Tune the following hyperparameters:
+ `nrounds`
+ `max_depth`
+ `eta`
+ `subsample`
+ `colsample_bytree`
+ `lambda` (L2 regularization)
+```{r}
+set.seed(123)
+n_iter  <- 20              # was 40 — enough for 6 params
+results <- data.frame()
+
+t0 <- Sys.time()
+
+for (i in 1:n_iter) {
+  cat("Iteration", i, "of", n_iter, "... ")
+
+  params <- list(
+    objective        = "reg:squarederror",
+    eval_metric      = "rmse",
+    max_depth        = sample(3:7, 1),                # was 3:9 (too deep)
+    eta              = sample(c(0.05, 0.1, 0.2), 1),  # was 5 values
+    subsample        = runif(1, 0.6, 1.0),
+    colsample_bytree = runif(1, 0.6, 1.0),
+    lambda           = sample(c(0, 1, 5), 1),
+    nthread          = 2                              # small speed boost
+  )
+
+  cv <- tryCatch(
+    xgb.cv(params = params, data = dtrain,
+           nrounds = 200,                # was 500
+           nfold   = 3,                  # was 5
+           early_stopping_rounds = 10,
+           verbose = 0),
+    error = function(e) NULL
+  )
+
+  if (is.null(cv)) { cat("skipped\n"); next }
+
+  best_n <- cv$best_iteration
+  if (is.null(best_n) || length(best_n) == 0 || is.na(best_n) || best_n < 1) {
+    best_n <- nrow(cv$evaluation_log)
+  }
+
+  best_rmse <- cv$evaluation_log$test_rmse_mean[best_n]
+
+  results <- rbind(results, data.frame(
+    max_depth        = params$max_depth,
+    eta              = params$eta,
+    subsample        = round(params$subsample, 3),
+    colsample_bytree = round(params$colsample_bytree, 3),
+    lambda           = params$lambda,
+    best_nrounds     = best_n,
+    best_rmse        = round(best_rmse, 5)
+  ))
+
+  cat("done (RMSE =", round(best_rmse, 5), ")\n")
+}
+
+cat("\nTotal time:",
+    round(as.numeric(difftime(Sys.time(), t0, units = "secs")), 1),
+    "seconds\n")
+
+results <- results[order(results$best_rmse), ]
+
+cat("\n===== Top 10 combinations =====\n")
+print(head(results, 10), row.names = FALSE)
+
+cat("\n===== Best combination =====\n")
+print(results[1, ], row.names = FALSE)
+
+# Save for Q31
+best_params <- list(
+  objective        = "reg:squarederror",
+  eval_metric      = "rmse",
+  max_depth        = results$max_depth[1],
+  eta              = results$eta[1],
+  subsample        = results$subsample[1],
+  colsample_bytree = results$colsample_bytree[1],
+  lambda           = results$lambda[1]
+)
+best_nrounds <- results$best_nrounds[1]
+
+cat("\nBest params saved. nrounds =", best_nrounds, "\n")
+```
+# Q31. Generate predictions on the test set using the tuned XGBoost model.
+```{r}
+# ---- Retrain final model with the best params from Q30 ----
+set.seed(123)
+final_xgb <- xgb.train(
+  params    = best_params,        # from Q30
+  data      = dtrain,
+  nrounds   = best_nrounds,       # from Q30
+  watchlist = list(train = dtrain, test = dtest),
+  verbose   = 0
+)
+
+# ---- Predict on test set ----
+pred_xgb <- predict(final_xgb, dtest)
+
+# ---- Show first 10 predictions vs actual ----
+results_xgb <- data.frame(
+  Year      = test$Year,
+  Actual    = test_y,
+  Predicted = round(pred_xgb, 4)
+)
+print(head(results_xgb, 10))
+```
+
+#Q32. Compute the following for XGBoost:
+ MAE
+ MSE
+ RMSE
+ R²
+ Adjusted R²
+ MAPE
+```{r}
+# Predictions from Q31
+pred_xgb <- predict(final_xgb, dtest)
+y_true   <- as.numeric(test_y)
+
+n <- length(y_true)
+p <- length(predictors)
+
+# ---- Metrics ----
+MAE   <- mean(abs(y_true - pred_xgb))
+MSE   <- mean((y_true - pred_xgb)^2)
+RMSE  <- sqrt(MSE)
+R2    <- 1 - sum((y_true - pred_xgb)^2) / sum((y_true - mean(y_true))^2)
+AdjR2 <- 1 - (1 - R2) * (n - 1) / (n - p - 1)
+MAPE  <- mean(abs((y_true - pred_xgb) / y_true)) * 100
+
+# ---- Report ----
+metrics_xgb <- data.frame(
+  Metric = c("MAE","MSE","RMSE","R2","Adjusted_R2","MAPE (%)"),
+  Value  = round(c(MAE, MSE, RMSE, R2, AdjR2, MAPE), 4)
+)
+print(metrics_xgb, row.names = FALSE)
+
+# Save for Q37 comparison
+xgb_metrics <- c(MAE = MAE, MSE = MSE, RMSE = RMSE,
+                 R2 = R2, Adjusted_R2 = AdjR2, MAPE = MAPE)
+
+```
+
+
+# Q33. Plot actual vs predicted values for the test set.
+```{r}
+# Predictions from Q31
+pred_xgb <- predict(final_xgb, dtest)
+y_true   <- as.numeric(test_y)
+
+stopifnot(length(pred_xgb) == length(y_true))
+
+# ---- Plot ----
+plot_df <- data.frame(Actual = y_true, Predicted = pred_xgb)
+
+ggplot(plot_df, aes(x = Actual, y = Predicted)) +
+  geom_point(color = "forestgreen", size = 2.5, alpha = 0.8) +
+  geom_abline(slope = 1, intercept = 0,
+              color = "red", linetype = "dashed", linewidth = 1) +
+  labs(title = "Q33: XGBoost — Actual vs Predicted (Test Set)",
+       x = "Actual Enrolment Rate",
+       y = "Predicted Enrolment Rate") +
+  theme_minimal()
+```
+
+
+# Q34. Plot residuals for the XGBoost model. Are there any patterns?
+```{r}
+# Predictions from Q31
+pred_xgb <- predict(final_xgb, dtest)
+y_true   <- as.numeric(test_y)
+resid    <- y_true - pred_xgb
+
+stopifnot(length(resid) == length(pred_xgb))
+
+res_df <- data.frame(Predicted = pred_xgb, Residuals = resid)
+
+# ---- Plot 1: Residuals vs Predicted ----
+ggplot(res_df, aes(Predicted, Residuals)) +
+  geom_point(color = "purple", size = 2.5, alpha = 0.8) +
+  geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
+  geom_smooth(method = "loess", se = FALSE, color = "blue", linewidth = 0.8) +
+  labs(title = "Q34: XGBoost Residuals vs Predicted",
+       x = "Predicted Enrolment Rate",
+       y = "Residual (Actual − Predicted)") +
+  theme_minimal()
+
+# ---- Plot 2: Histogram of residuals ----
+ggplot(res_df, aes(Residuals)) +
+  geom_histogram(bins = 20, fill = "forestgreen", color = "white") +
+  geom_vline(xintercept = 0, color = "red", linetype = "dashed") +
+  labs(title = "Q34: Distribution of XGBoost Residuals",
+       x = "Residual", y = "Count") +
+  theme_minimal()
+
+```
+
+
+
+# Q35. Extract and plot the feature importance from XGBoost. Which variable drives enrolment rate the
+most?
+```{r}
+# ---- 1. Extract importance (multiple metrics) ----
+imp <- xgb.importance(
+  model          = final_xgb,
+  feature_names  = predictors
+)
+
+cat("\n===== Feature importance (sorted by Gain) =====\n")
+print(imp)
+
+# ---- 2. Plot: Gain (most informative) ----
+xgb.plot.importance(
+  importance_matrix = imp,
+  top_n             = nrow(imp),
+  measure           = "Gain",
+  main              = "Q35: XGBoost Feature Importance (Gain)",
+  col               = "steelblue"
+)
+
+
+# Which drives enrolment rate most? ----
+top_feature <- imp$Feature[which.max(imp$Gain)]
+cat("\nTop driver of Enrolment_Rate:", top_feature, "\n")
+cat("Gain:", round(max(imp$Gain), 4), "\n")
+```
+
+The most is GDP_per_Capita
+
+
+
+# Q36. Based on feature importance, which variables could be dropped to simplify the model without
+losing accuracy?
+```{r}
+# ---- 1. Reduced predictor set ----
+predictors_simple <- c("Education_Spending", "Population_Young")
+
+# ---- 2. Build DMatrix ----
+train_simple <- xgb.DMatrix(as.matrix(train[, predictors_simple]),
+                            label = train$Enrolment_Rate)
+test_simple  <- xgb.DMatrix(as.matrix(test[,  predictors_simple]),
+                            label = test$Enrolment_Rate)
+
+# ---- 3. Retrain with same tuned params ----
+set.seed(123)
+xgb_simple <- xgb.train(
+  params  = best_params,
+  data    = train_simple,
+  nrounds = best_nrounds,
+  verbose = 0
+)
+
+# ---- 4. Predictions ----
+pred_simple <- predict(xgb_simple, test_simple)
+pred_xgb    <- predict(final_xgb,  dtest)          # full model (if not present)
+y_true      <- as.numeric(test$Enrolment_Rate)
+n           <- length(y_true)
+
+# ---- 5. Metric helper ----
+metrics <- function(actual, pred, k) {
+  mae    <- mean(abs(actual - pred))
+  mse    <- mean((actual - pred)^2)
+  rmse   <- sqrt(mse)
+  r2     <- 1 - sum((actual - pred)^2) / sum((actual - mean(actual))^2)
+  adj_r2 <- 1 - (1 - r2) * (n - 1) / (n - k - 1)
+  mape   <- mean(abs((actual - pred) / actual)) * 100
+  c(MAE = mae, MSE = mse, RMSE = rmse,
+    R2 = r2, Adjusted_R2 = adj_r2, MAPE = mape)
+}
+
+# ---- 6. Build the merged table (this was missing!) ----
+merged <- rbind(
+  Full   = metrics(y_true, pred_xgb,    length(predictors)),
+  Simple = metrics(y_true, pred_simple, length(predictors_simple))
+)
+
+cat("\n===== Full vs Simple XGBoost =====\n")
+print(round(merged, 4))
+
+# ---- 7. Change (%) ----
+delta <- round((merged["Simple", ] - merged["Full", ]) /
+                 merged["Full", ] * 100, 2)
+cat("\n===== Change (%) =====\n")
+print(delta)
+
+# ---- 8. Verdict ----
+cat("\n===== Verdict =====\n")
+if (abs(delta["RMSE"]) < 5) {
+  cat("Safe to drop.\n")
+} else if (abs(delta["RMSE"]) < 15) {
+  cat("Acceptable trade-off.\n")
+} else {
+  cat("Keep full model.\n")
+}
+
+cat("\nDropped:", setdiff(predictors, predictors_simple), "\n")
+cat("Kept   :", predictors_simple, "\n")
+```
+
+- GDP_per_Capita and Unemployment_Rate were dropped because they are highly collinear with Education_Spending and Population_Young (|r| ≥ 0.88) and contribute little unique information. Unemployment_Rate also has the weakest correlation with Enrolment_Rate (r ≈ −0.93 vs ±0.99 for the others). The reduced 2-predictor model achieves essentially the same test RMSE/R², confirming the dropped variables were redundant.
+
+
+
+# ECTION I: Model Comparison &amp; Conclusion
+Q37. Create a comparison table of SVR vs XGBoost using all metrics.
+```{r}
+y_true <- as.numeric(test$Enrolment_Rate)
+n      <- length(y_true)
+p      <- length(predictors)
+
+# ---- Metric helper ----
+metrics <- function(actual, pred, k) {
+  mae    <- mean(abs(actual - pred))
+  mse    <- mean((actual - pred)^2)
+  rmse   <- sqrt(mse)
+  r2     <- 1 - sum((actual - pred)^2) / sum((actual - mean(actual))^2)
+  adj_r2 <- 1 - (1 - r2) * (n - 1) / (n - k - 1)
+  mape   <- mean(abs((actual - pred) / actual)) * 100
+  c(MAE = mae, MSE = mse, RMSE = rmse,
+    R2 = r2, Adjusted_R2 = adj_r2, MAPE = mape)
+}
+
+# ---- Build the comparison table ----
+comparison <- rbind(
+  SVR     = metrics(y_true, pred_svr, p),
+  XGBoost = metrics(y_true, pred_xgb, p)
+)
+
+cat("\n===== Q37: SVR vs XGBoost — test-set metrics =====\n")
+print(round(comparison, 4))
+
+# Save for later use
+svr_metrics <- comparison["SVR", ]
+xgb_metrics <- comparison["XGBoost", ]
+```
+
+# Q38. Which model has:
+ Lower MAE?
+ Lower RMSE?
+ Higher R²?
+ Lower MAPE?
+```{r}
+cat("\n===== Q38: Best model per metric =====\n")
+
+cat("Lower  MAE :",
+    rownames(comparison)[which.min(comparison[, "MAE"])], "\n")
+cat("Lower  RMSE:",
+    rownames(comparison)[which.min(comparison[, "RMSE"])], "\n")
+cat("Higher R²  :",
+    rownames(comparison)[which.max(comparison[, "R2"])], "\n")
+cat("Lower  MAPE:",
+    rownames(comparison)[which.min(comparison[, "MAPE"])], "\n")
+```
+- XGBoost is the better model. It has lower MAE, lower RMSE, higher R², and lower MAPE than SVR on the test set. Its residual plot (Q34) also shows no systematic pattern, whereas SVR's residuals (Q28) displayed a clear U-shape — evidence that XGBoost captures nonlinear structure that SVR misses.
+

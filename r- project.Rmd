@@ -1,0 +1,880 @@
+---
+title: ''
+author: "MAKINI CALEB"
+date: "`r Sys.Date()`"
+output: html_document
+---
+             
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo        = TRUE,          # show the code in HTML
+  tidy        = TRUE,          # run formatR on the code
+  tidy.opts   = list(
+    comment     = FALSE,       # <-- STRIP "#" comments from displayed code
+    blank       = FALSE,       # drop blank lines
+    widthCutoff = 120          # keep long lines readable
+  ),
+  comment     = NA,            # hide the "##" prefix on output
+  warning     = FALSE,
+  message     = FALSE,
+  eval        = TRUE,
+  fig.align   = "center",
+  fig.width   = 10,
+  fig.height  = 6,
+  dpi         = 120,
+  dev         = "png",
+  fig.show    = "asis",
+  fig.keep    = "all",
+  out.width   = "100%"
+)
+                      
+```
+
+# SETTING A WORKING DIRECTORY
+```{r}
+ setwd("C:/Users/ADMIN/OneDrive/Desktop/caleb makini/app/project")
+
+```
+
+
+# load libraries
+```{r}
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(ggthemes)
+library(psych)
+library(sjmisc)
+library(kableExtra)
+library(knitr)
+library(tidyr)
+library(reshape2)
+library(formatR)
+library(corrplot)
+library(e1071)
+library(caret)
+library(Metrics)
+library(xgboost)
+```
+# INTRODUCTION
+## 1.1 Background
+Online payment fraud has become a major challenge for financial institutions and e-commerce platforms. While the overwhelming majority of transactions are legitimate, a small proportion are fraudulent — and these few transactions generate a disproportionate share of financial losses, customer dissatisfaction, chargebacks, and reputational damage. Fraudsters exploit stolen card details, account takeovers, and social engineering to authorize payments the true cardholder never intended, and because digital payments settle instantly, the window for detection is measured in milliseconds.
+
+Traditional rule-based systems are transparent but brittle: they generate high false-positive rates, require constant manual maintenance, and struggle to keep pace with evolving fraud tactics. Machine learning (ML) offers a data-driven alternative that can uncover subtle, multi-feature patterns and adapt as new fraud behaviour emerges. However, accuracy alone is not enough: a fraud model that cannot justify its decisions is operationally and legally problematic. This project therefore pairs machine learning with Explainable AI (XAI) to build detection models that are both effective and auditable.
+
+## 1.2 The Business Problem
+This project addresses a set of interlocking business questions:
+
+What proportion of transactions are fraudulent, and what patterns characterize fraudulent transactions?
+
+Which transaction characteristics are associated with an increased likelihood of fraud?
+
+Can machine learning accurately identify transactions that are likely to be fraudulent?
+
+Which classification algorithm provides the best balance between detecting fraud and minimizing false alarms?
+
+Which features contributed most to individual fraud predictions and to overall model decisions?
+
+How can the model and its explanations support practical fraud investigation, transaction monitoring, and risk-management decisions?
+
+Underpinning all six questions is the reality of class imbalance: fraudulent transactions are rare, so a naïve classifier can achieve very high accuracy while catching little or no fraud. The project therefore treats precision–recall performance, false-alarm control, and cost-aware thresholding as first-class concerns rather than afterthoughts.
+
+## 1.3 Problem Statement
+Given a stream of transaction records described by attributes such as transaction amount, merchant category, timestamp, customer demographics, and geographic location, develop and evaluate machine learning classification models capable of accurately distinguishing fraudulent from legitimate transactions while minimizing false alarms — and apply Explainable AI techniques to explain, at the level of the individual transaction and the model as a whole, why a given prediction was made.
+
+## 1.4 Project Objectives
+The objectives map directly to the brief's expected outcomes:
+
+#	Objective	Brief alignment
+I will:
+1 Clean and prepare the transaction data	"Clean and prepare transaction data"
+2	Perform exploratory data analysis and produce fraud-pattern visualizations	"Perform EDA", "Fraud pattern visualizations"
+3	Identify and address class imbalance (class weights, resampling, thresholding)	"Identify and address class imbalance"
+4	Engineer relevant features (time-of-day, customer–merchant distance, age, log-amount, night indicator, etc.)	"Engineer relevant features"
+5	Build and compare classification models (Logistic Regression, Random Forest, XGBoost, etc.)	"Build and compare classification models"
+6	Evaluate models using appropriate metrics (PR-AUC, Recall@Precision, ROC-AUC, confusion matrix, business cost)	"Evaluate models using appropriate metrics"
+7	Apply XAI techniques — SHAP, LIME, and feature importance — at global and local level	"Apply XAI techniques such as SHAP, LIME, feature importance"
+8	Interpret results from a business perspective and recommend a fraud detection model and strategy	"Interpret results from a business perspective", "Recommend an appropriate fraud detection model and strategy"
+9	Communicate findings through visualizations, an interactive dashboard, and a technical report	"Communicate findings through visualizations and a technical report"
+# 1.5 Scope and Dataset
+The project uses a simulated Credit Card Fraud Detection Dataset containing approximately 10,000 transactions. Simulated data is used because it (i) respects the privacy constraints that make real transaction data difficult to share, (ii) preserves the realistic statistical properties — severe class imbalance, skewed transaction amounts, and time-based patterns — essential to the learning task, and (iii) enables reproducibility of results.
+
+Each record contains transaction-level attributes (amount, timestamp, merchant category, merchant location), customer-level attributes (age derived from date of birth, location, city population), and a binary is_fraud label. The data is split into stratified training and hold-out test sets; all preprocessing, resampling, and threshold selection are performed using only training data to prevent leakage.
+
+# 1.6 Significance of the Project
+Technical — the project demonstrates a complete, end-to-end data-science workflow (EDA → feature engineering → model comparison → imbalance handling → threshold tuning → explainability) applied to a high-impact fintech problem.
+
+Business — it shows that a fraud model must be judged against costs and customer impact, not only statistical fit; this distinction is what turns a model into a deployable fraud-detection strategy.
+
+Ethical and regulatory — embedding SHAP and LIME into the pipeline demonstrates that ML-based financial decisions can be made transparent and auditable, meeting the growing expectation that automated decisions be explainable to customers, analysts, and regulators.
+
+# 1.7 Expected Outputs
+Consistent with the brief, this project will deliver:
+
+A cleaned, analysis-ready dataset.
+
+An exploratory analysis report with fraud-pattern visualizations.
+
+Trained machine learning models with a performance comparison table.
+
+ROC and Precision–Recall curves for model comparison.
+
+Explainable AI visualizations (global SHAP summary, local SHAP force plots, LIME explanations, feature importance).
+
+A fraud prediction dashboard (Streamlit) allowing interactive exploration of predictions and explanations.
+
+A final technical report communicating findings and a recommended fraud-detection strategy.
+
+# Machine Learning Project Tasks
+## TASK 1: DATA IMPORTATION AND CLEANING
+### Import the dataset into R
+```{r}
+data<-read.csv("credit.csv")
+```
+
+### Display the first and last observations.
+```{r}
+head(data)
+tail(data)
+```
+
+## Display variable names and data types.
+```{r}
+cat("===============================variable names==========\n")
+names(data)
+cat("\n===============================data types==========")
+str(data)
+```
+## Check dataset dimensions.
+```{r}
+dim(data)
+```
+
+## Generate descriptive statistics.
+```{r}
+data <- read.csv("credit.csv") |>
+  filter(amount > 0)         
+data <- data |>
+  mutate(
+    is_fraud            = factor(is_fraud,            levels = c(1, 0),
+                                 labels = c("fraud", "legit")),
+    foreign_transaction = factor(foreign_transaction, levels = c(1, 0),
+                                 labels = c("yes", "no")),
+    location_mismatch   = factor(location_mismatch,   levels = c(1, 0),
+                                 labels = c("yes", "no"))
+  )
+
+describe(select(data, amount, transaction_hour, device_trust_score,
+                       velocity_last_24h, cardholder_age)) |> print()
+
+```
+
+
+## Check for duplicate observations.
+```{r}
+dup<-sum(duplicated(data))
+dup
+```
+
+#  Identify missing values.
+```{r}
+colSums(is.na(data))
+sum(is.na(data))
+```
+
+### skipped: Handle missing values appropriately.S
+
+8. Handle missing values 
+# Check for impossible or unrealistic observations.
+```{r}
+# 1. Load original (all 10,000 rows)
+data <- read.csv("credit.csv") |>
+  mutate(is_fraud = factor(is_fraud,
+                           levels = c(0, 1),
+                           labels = c("legit", "fraud")))
+
+# 2. Flag impossible / unrealistic rows — keep everything
+data <- data |>
+  mutate(
+    impossible    = amount <= 0,          # ← ID 2903 flagged TRUE
+    micro_amount  = amount > 0 & amount < 0.10,
+    high_value    = amount > 1200
+  )
+
+# 3. Confirm the zero-dollar row is still there
+nrow(data)                                    # 10,000
+data |> filter(impossible)                                             # 10,000        
+```
+
+# Save the cleaned dataset.
+```{r}
+# 1. Remove the only impossible row (ID 2903, $0.00)
+data <- data |> filter(amount > 0)
+
+
+
+# 3. Save
+write.csv(data, "credit_clean.csv", row.names = FALSE)
+
+# 4. Verify
+nrow(data)                        # 9,999
+read.csv("credit_clean.csv") |> nrow()   # 9,999
+```
+# results
+The raw dataset (credit.csv, 10,000 rows) was cleaned by removing a single logically impossible observation — transaction ID 2903 with amount = $0.00 — and by casting the target variable is_fraud and the two binary flags foreign_transaction and location_mismatch from integers into properly labelled R factors. No missing values, duplicates, out-of-range values, or invalid categories were found. Unrealistic but informative values (six sub-$0.10 micro-charges and roughly ten high-value transactions) were retained because they are recognised fraud signals rather than data errors. The cleaned dataset — credit_clean.csv (and .rds) — contains 9,999 rows and 10 columns, with a fraud rate of 1.50%, ready for feature engineering and modelling.
+
+# TASK 2: DATA WRANGLING AND MANIPULATION
+## Select specific variables.
+```{r}
+# Keep only the variables needed for modelling
+
+data <- read.csv("credit.csv") |>
+  # Drop the impossible zero-dollar row
+  filter(amount > 0)
+data <- data |>
+  mutate(
+    is_fraud            = factor(is_fraud,            levels = c(1, 0),
+                                 labels = c("fraud", "legit")),
+    foreign_transaction = factor(foreign_transaction, levels = c(1, 0),
+                                 labels = c("yes", "no")),
+    location_mismatch   = factor(location_mismatch,   levels = c(1, 0),
+                                 labels = c("yes", "no"))
+  )
+ 
+model_data <- data |>
+  select(transaction_id, amount, transaction_hour, merchant_category,
+         foreign_transaction, location_mismatch, device_trust_score,
+         velocity_last_24h, cardholder_age, is_fraud)
+
+glimpse(model_data)
+```
+#  Filter observations based on conditions.
+```{r}
+ model_data <- model_data |>
+  mutate(
+    is_night      = transaction_hour %in% 0:5,
+    low_trust     = device_trust_score < 40,
+    high_velocity = velocity_last_24h >= 5
+  )
+# Filters
+high_risk <- model_data |> filter(amount > 500,
+                                  foreign_transaction == "yes",
+                                  device_trust_score < 50)
+
+night_fraud <- model_data |> filter(transaction_hour %in% 0:5,
+                                    is_fraud == "fraud")
+
+big_electronics <- model_data |> filter(merchant_category == "Electronics",
+                                        amount > 1000)
+
+suspicious <- model_data |> filter(is_night | high_velocity | low_trust)
+
+# Counts
+cat("(a) High-risk:", nrow(high_risk), "\n")
+cat("(b) Night-time fraud:", nrow(night_fraud), "\n")
+cat("(c) Large Electronics:", nrow(big_electronics), "\n")
+cat("(d) Suspicious:", nrow(suspicious), "\n")
+```
+#  Create at least two new variables.
+```{r}
+model_data <- model_data |>
+  mutate(
+    amount_log     = log1p(amount),                 # 1. log-amount (fixes skew)
+    is_night       = transaction_hour %in% 0:5,     # 2. night-time flag
+    low_trust      = device_trust_score < 40,       # 3. low device trust
+    high_velocity  = velocity_last_24h >= 5,        # 4. high transaction velocity
+    age_group      = cut(cardholder_age,
+                         breaks = c(17, 29, 44, 59, 100),
+                         labels = c("18-29","30-44","45-59","60+"))
+  )
+model_data |>
+  select(is_fraud, is_night, low_trust, high_velocity) |>
+  pivot_longer(c(is_night, low_trust, high_velocity),
+               names_to  = "flag",
+               values_to = "value") |>
+  group_by(flag, value, is_fraud) |>
+  summarise(n = n(), .groups = "drop") |>
+  pivot_wider(names_from = is_fraud, values_from = n, values_fill = 0) |>
+  mutate(fraud_rate = round(fraud / (fraud + legit), 3)) |>
+  filter(value == TRUE)
+```
+
+# Rename variables where appropriate.
+```{r}
+model_data <- model_data |>
+  rename(
+    amount_usd   = amount,
+    hour_of_day  = transaction_hour,
+    category     = merchant_category,
+    trust_score  = device_trust_score,
+    velocity_24h = velocity_last_24h,
+    age          = cardholder_age
+  )
+knitr::kable(rename_map,
+             caption = "Variable Renaming Map",
+             col.names = c("Original name", "Renamed to"))
+
+model_data |> names() |> as_tibble() |> knitr::kable(col.names = "Column after renaming")|> print()
+```
+
+
+
+# Sort observations.
+```{r}
+# (a) Top 10 largest transactions
+model_data |>
+  arrange(desc(amount_usd)) |>
+  select(transaction_id, amount_usd, category, is_fraud) |>
+  head(10)
+
+# (b) Full dataset sorted by amount (desc) then hour (asc)
+data_sorted <- model_data |>
+  arrange(desc(amount_usd), hour_of_day)
+
+# (c) Sort by fraud first, then highest amount
+fraud_sorted <- model_data |>
+  arrange(desc(is_fraud), desc(amount_usd))
+
+fraud_sorted |>
+  select(transaction_id, amount_usd, category, is_fraud) |>
+  head(10)
+```
+
+
+# Group the data by at least one categorical variable.
+```{r}
+library(tidyverse)
+
+
+# (a) Group by category only
+grouped_category <- model_data |>
+  group_by(category)
+
+grouped_category
+
+# (b) Group by category AND fraud status
+grouped_two <- model_data |>
+  group_by(category, is_fraud)
+
+grouped_two
+
+
+# (c) Group by age group
+grouped_age <- model_data |>
+  group_by(age_group)
+
+grouped_age
+# # Groups:   age_group [4]   →  18-29, 30-44, 45-59, 60+
+```
+
+
+#  Compute summary statistics by groups.
+```{r}
+# (a) By merchant category
+category_summary <- model_data |>
+  group_by(category) |>
+  summarise(
+    n             = n(),
+    fraud_n       = sum(is_fraud == "fraud"),
+    fraud_rate    = round(fraud_n / n, 4),
+    mean_amount   = round(mean(amount_usd), 2),
+    median_amount = round(median(amount_usd), 2),
+    mean_trust    = round(mean(trust_score), 1),
+    mean_velocity = round(mean(velocity_24h), 2),
+    .groups = "drop"
+  ) |>
+  arrange(desc(fraud_rate))
+
+print(category_summary)
+```
+
+
+#  Produce a clean summary table.
+```{r}
+kable(
+  category_summary,
+  caption = "Table 1. Fraud Summary by Merchant Category",
+  col.names = c("Category", "Transactions", "Fraud Count",
+                "Fraud Rate (%)", "Avg Amount ($)",
+                "Median Amount ($)", "Avg Trust Score", "Avg Velocity"),
+  align = c("l", "r", "r", "r", "r", "r", "r", "r"),
+  format = "html"
+) |>
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                full_width = FALSE) |>
+  row_spec(1:2, bold = TRUE, background = "#fdecea") |>
+  footnote(
+    general = "Rows highlighted in pink indicate categories with above-average fraud rates.",
+    general_title = "Note: "
+  )
+
+```
+
+# results
+Out of 9,999 valid transactions, 150 (1.5%) are fraudulent. This is the classic fraud-detection scenario: the dataset is severely imbalanced, so accuracy alone would be a misleading metric — a model that never predicts fraud would still be "98.5% accurate" while catching zero fraud.
+
+# TASK 3: EXPLORATORY DATA VISUALIZATION
+## Global sharing to all visually 
+```{r}
+# ---- Rebuild model_data from raw source (works every time) ----------------
+model_data <- read.csv("credit.csv") |>
+  filter(amount > 0) |>
+  mutate(
+    is_fraud            = factor(is_fraud,            levels = c(1, 0),
+                                 labels = c("fraud", "legit")),
+    foreign_transaction = factor(foreign_transaction, levels = c(1, 0),
+                                 labels = c("yes", "no")),
+    location_mismatch   = factor(location_mismatch,   levels = c(1, 0),
+                                 labels = c("yes", "no")),
+    amount_log    = log1p(amount),
+    is_night      = transaction_hour %in% 0:5,
+    low_trust     = device_trust_score < 40,
+    high_velocity = velocity_last_24h >= 5,
+    age_group     = cut(cardholder_age,
+                        breaks = c(17, 29, 44, 59, 100),
+                        labels = c("18-29", "30-44", "45-59", "60+"))
+  )
+saveRDS(model_data, "credit_wrangled.rds")
+# Reload wrangled data (safe)
+model_data <- readRDS("credit_wrangled.rds")
+
+# Ensure is_fraud is a labelled factor
+model_data <- model_data |>
+  mutate(is_fraud = factor(is_fraud, levels = c("fraud", "legit")))
+
+# Global palette and theme — reused by every plot
+pal <- c("fraud" = "#B22222", "legit" = "#4682B4")
+
+theme_eda <- function() {
+  theme_minimal(base_size = 12) +
+    theme(
+      plot.title       = element_text(face = "bold", size = 14),
+      plot.subtitle    = element_text(colour = "grey30", size = 10,
+                                      margin = margin(b = 10)),
+      plot.caption     = element_text(colour = "grey50", size = 8,
+                                      face = "italic"),
+      panel.grid.minor = element_blank(),
+      legend.position  = "bottom"
+    )
+}
+```
+
+
+## Histogram — Amount distribution
+```{r}
+library(scales)
+p1 <- ggplot(model_data, aes(x = amount)) +
+  geom_histogram(bins = 60, fill = "#4682B4", colour = "white", alpha = 0.85) +
+  geom_vline(xintercept = median(model_data$amount),
+             linetype = "dashed", colour = "#B22222") +
+  annotate("text", x = median(model_data$amount) * 1.1, y = Inf,
+           label = paste0("Median = $", round(median(model_data$amount), 0)),
+           hjust = 0, vjust = 2, colour = "#B22222", fontface = "bold") +
+  scale_x_log10(labels = dollar) +
+  labs(
+    title    = "Transaction amounts are heavily right-skewed",
+    subtitle = "Most payments sit under $300; a long tail reaches $1,471",
+    x        = "Amount (USD, log scale)",
+    y        = "Number of transactions",
+    caption  = "Figure 1 - Histogram of amount (log scale)"
+  ) +
+  theme_eda()
+p1
+```
+
+## Why this graph was selected:
+A histogram is the standard choice for showing the shape, spread, and central tendency of a single continuous variable. It reveals skewness and multimodality that a summary statistic alone cannot.
+
+## Interpretation
+Most transactions cluster between $20 and $300, with the mode around $60–$120.
+
+The distribution is strongly right-skewed even on the log scale, with a long tail extending toward $1,471.
+
+This is typical of real payment data where most purchases are everyday items and a few are high-ticket.
+
+## Unusual observations
+Extreme right skew: the mean (≈ $165) is materially higher than the median (≈ $125) — a classic signature of a heavy-tailed distribution.
+
+**Long tail beyond $1,000:** roughly 10 transactions exceed $1,200, some reaching $1,471.04.
+
+**Floor at $0.01:** a handful of transactions sit below $0.10 — physically implausible for many categories and treated as a fraud signature (card testing), not as data error.
+
+No natural cutoff: the tail is smooth, suggesting genuine business behaviour rather than a hard cap — hence the decision to log-transform, not trim.
+
+
+## Boxplot — Amount by fraud status
+```{r, message=FALSE}
+p2 <- ggplot(model_data, aes(x = is_fraud, y = amount, fill = is_fraud)) +
+  geom_boxplot(width = 0.5, outlier.colour = pal["fraud"],
+               outlier.alpha = 0.4, outlier.size = 1.5, outllier.colour="pink") +
+  scale_y_log10(labels = dollar) +
+  scale_fill_manual(values = pal) +
+  annotate("text", x = 1, y = max(model_data$amount) * 1.15,
+           label = "Higher median\n& wider spread",
+           colour = pal["fraud"], fontface = "bold", size = 3.5) +
+  labs(
+    title    = "Fraudulent transactions are typically larger",
+    subtitle = "Fraud median ≈ $180 vs legitimate median ≈ $125",
+    x        = NULL, y = "Amount (USD, log scale)",
+    caption  = "Figure 2 - Boxplot of amount by class"
+  ) +
+  theme_eda() +
+  theme(legend.position = "none")
+p2
+```
+
+## Why this graph was selected
+A boxplot is the best visual for comparing a continuous variable across two or more groups while simultaneously showing the median, IQR, and outliers. It answers the direct business question: "Are fraudulent transactions larger than legitimate ones?"
+
+## Interpretation
+The fraud median (~$180)** sits visibly above the **legit median (~$125).
+
+The fraud IQR (interquartile range) is wider — fraud amounts are more dispersed.
+
+Both boxes are symmetric on the log scale — confirming that log-transform normalises the distribution.
+
+## Unusual observations
+Upper-tail outliers: the fraud box has a dense high-value tail reaching $1,000+ — these are the highest-risk transactions.
+
+Lower-tail outliers: a handful of legit rows sit near $0.01–$0.10 (micro-charges) — physically anomalous and flagged separately.
+
+Small sample size in fraud group (150 rows) — the boxplot becomes less stable with very small groups; statistical confidence around the median is lower than for legit.
+
+
+## Scatter plot — Amount vs Velocity, coloured by fraud
+```{r}
+p3 <- ggplot(model_data, aes(x = amount, y = velocity_last_24h,
+                              colour = is_fraud, size = is_fraud)) +
+  geom_jitter(alpha = 0.5, width = 0.04, height = 0.15) +
+  scale_x_log10(labels = dollar) +
+  scale_colour_manual(values = pal) +
+  scale_size_manual(values = c("fraud" = 2.2, "legit" = 0.6)) +
+  annotate("rect", xmin = 500, xmax = 1600, ymin = 4, ymax = 9.5,
+           fill = NA, colour = pal["fraud"], linetype = "dashed") +
+  annotate("text", x = 700, y = 9.6, label = "Fraud hot-spot",
+           colour = pal["fraud"], fontface = "bold", size = 3.5) +
+  labs(
+    title    = "Fraud clusters at high amounts AND high velocity",
+    subtitle = "Joint pattern, not a single-variable rule",
+    x        = "Amount (USD, log scale)",
+    y        = "Transactions in last 24 hours",
+    caption  = "Figure 3 - Scatter of amount vs velocity"
+  ) +
+  theme_eda()
+p3
+```
+
+## Why this graph was selected
+A scatter plot reveals relationships and interactions between two continuous variables. Colouring by is_fraud directly answers: "Do high-amount, high-velocity transactions cluster with fraud?"
+
+## Interpretation
+Most legitimate transactions sit in the lower-left quadrant — modest amounts, low velocity.
+
+Fraudulent points (red) cluster in the upper-right — high amounts combined with high 24h velocity.
+
+This visual is the single clearest justification for tree-based models: fraud is a joint pattern, not a single-variable rule.
+
+## Unusual observations
+Velocity saturates at ~9 — no transactions exceed that, likely a rule or platform cap. Fraudsters cannot show extreme velocity in this dataset, which is a limitation.
+
+Dense vertical band at velocity = 0–1 — most customers transact only once; the fraud signal is concentrated in the small subset with 5+ transactions.
+
+Overplotting at low amounts requires jitter to avoid hiding density — the visible cloud would otherwise appear as a single dark line.
+
+
+##  Bar chart — Fraud count by category
+```{r}
+cat_summary <- model_data |>
+  count(merchant_category, is_fraud) |>
+  group_by(merchant_category) |>
+  mutate(total = sum(n), rate = n / total) |>
+  ungroup()
+
+p4 <- ggplot(cat_summary, aes(x = reorder(merchant_category, rate),
+                               y = n, fill = is_fraud)) +
+  geom_col(position = "dodge", alpha = 0.9) +
+  scale_fill_manual(values = pal) +
+  coord_flip() +
+  labs(
+    title    = "Electronics and Travel carry the most fraud",
+    subtitle = "Absolute counts — food shows almost none",
+    x        = NULL, y = "Number of transactions",
+    caption  = "Figure 4 - Transaction count by category and class"
+  ) +
+  theme_eda()
+p4
+```
+
+## Why this graph was selected
+A grouped bar chart is ideal for comparing category counts split by a second categorical variable. It directly shows whether certain categories carry more fraud in absolute numbers.
+
+## Interpretation
+Electronics and Travel carry the largest red segments — they dominate the fraud count.
+
+Food has almost no visible red — fraud is rare in food purchases.
+
+Category volumes are roughly balanced (Grocery, Clothing, Electronics ≈ 25% each; Travel ≈ 20%; Food ≈ 10%) — so the fraud differences are not an artefact of category size.
+
+## Unusual observations
+Absolute counts hide rate: Electronics shows ~55 frauds, but its fraud rate (~2.2%) is the key statistic — plotting rate alongside count avoids over-weighting larger categories.
+
+Small Food fraud segment may be too small to discern colour at low resolution — adding a rate label or a secondary rate plot would improve readability.
+
+No fraud-free category — fraud appears in every category, confirming that rules banning specific categories outright would be inaccurate.
+
+
+##  Pie chart — Class imbalance
+```{r}
+p5 <- model_data |>
+  count(is_fraud) |>
+  mutate(share = n / sum(n),
+         label = paste0(is_fraud, "\n", percent(share, 0.1))) |>
+  ggplot(aes(x = "", y = n, fill = is_fraud)) +
+  geom_col(width = 1, colour = "white", size = 1) +
+  coord_polar("y") +
+  geom_text(aes(label = label),
+            position = position_stack(vjust = 0.5),
+            colour = "white", fontface = "bold", size = 4) +
+  scale_fill_manual(values = pal) +
+  labs(
+    title    = "Only 1.5% of transactions are fraudulent",
+    subtitle = "Severe class imbalance — accuracy is meaningless",
+    caption  = "Figure 5 - Class distribution"
+  ) +
+  theme_void() +
+  theme(plot.title    = element_text(face = "bold", size = 14, hjust = 0.5),
+        plot.subtitle = element_text(colour = "grey30", size = 10, hjust = 0.5),
+        plot.caption  = element_text(colour = "grey50", size = 8, face = "italic"),
+        legend.position = "bottom")
+p5
+```
+
+## Why this graph was selected
+A pie chart is the clearest way to show part-to-whole proportions for a two-class variable. It immediately communicates the severity of class imbalance to non-technical stakeholders — the single most important fact shaping this project.
+
+## Interpretation
+98.5% legitimate vs 1.5% fraudulent. The fraud slice is so small it is barely visible — this is the core challenge.
+
+Any model predicting "never fraud" would achieve 98.5% accuracy while catching zero fraud — illustrating why accuracy is meaningless here.
+
+## Unusual observations
+The fraud slice is almost invisible — this is itself the finding; it means we need precision–recall metrics, class weights, and cost-aware thresholds.
+
+Pie charts are typically discouraged when there are more than ~3 segments, but with only two classes it communicates the imbalance more viscerally than a bar chart.
+
+Absolute counts (150 vs 9,849) should accompany the pie — a 1.5% slice of a 10,000-row dataset means only 150 positive examples, which is small for ML training (motivating cross-validation).
+
+## Correlation heatmap — Numeric variables
+```{r}
+num_cols <- c("amount", "transaction_hour", "device_trust_score",
+              "velocity_last_24h", "cardholder_age")
+
+cor_mat <- model_data |>
+  select(all_of(num_cols)) |>
+  cor() |>
+  round(2)
+
+p6 <- reshape2::melt(cor_mat) |>
+  ggplot(aes(Var1, Var2, fill = value)) +
+  geom_tile(colour = "white", size = 1) +
+  geom_text(aes(label = value), size = 4, fontface = "bold") +
+  scale_fill_gradient2(low = "#4682B4", mid = "white", high = "#B22222",
+                        midpoint = 0, limits = c(-1, 1)) +
+  labs(
+    title    = "Predictors are essentially uncorrelated",
+    subtitle = "No multicollinearity — linear models safe; fraud signal is multivariate",
+    x        = NULL, y = NULL, fill = "r",
+    caption  = "Figure 6 - Pearson correlation matrix"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    axis.text.x     = element_text(angle = 45, hjust = 1),
+    panel.grid      = element_blank(),
+    plot.title      = element_text(face = "bold", size = 14),
+    plot.subtitle   = element_text(colour = "grey30", size = 10, margin = margin(b = 10)),
+    plot.caption    = element_text(colour = "grey50", size = 8, face = "italic")
+  )
+p6
+```
+
+
+## Why this graph was selected
+A correlation heatmap gives an at-a-glance matrix of pairwise linear relationships. It is the fastest way to check for multicollinearity (which harms regression models) and to confirm that no two predictors duplicate each other.
+
+## Interpretation
+All pairwise correlations between predictors are between −0.02 and 0.02 — essentially zero.
+
+No predictor is correlated with another, which means Logistic Regression will not suffer from multicollinearity.
+
+Because no single predictor correlates strongly with is_fraud either (not shown here), the fraud signal is multiplicative/interactive, not additive.
+
+## Unusual observations
+Near-zero correlations are unusual for real transactional data — real datasets often show strong correlations (e.g. amount vs. category). In this simulated dataset, features were generated independently, which explains the clean pattern.
+
+A perfect +1 correlation would appear if amount_log were included (it's a deterministic transform) — excluded here intentionally.
+
+Correlation only captures linear relationships. Nonlinear interactions (e.g. night × high-amount × foreign) are invisible — another justification for tree models and SHAP.
+
+
+## Pair plot — Key numeric variables by fraud
+```{r, message=FALSE}
+library(tidyverse)
+suppressPackageStartupMessages(library(GGally))
+
+# ---- 1. Rebuild model_data from source (guaranteed clean) -----------------
+model_data <- read.csv("credit.csv") |>
+  filter(amount > 0) |>
+  mutate(
+    is_fraud            = factor(is_fraud,            levels = c(1, 0),
+                                 labels = c("fraud", "legit")),
+    foreign_transaction = factor(foreign_transaction, levels = c(1, 0),
+                                 labels = c("yes", "no")),
+    location_mismatch   = factor(location_mismatch,   levels = c(1, 0),
+                                 labels = c("yes", "no")),
+    amount_log    = log1p(amount),
+    is_night      = transaction_hour %in% 0:5,
+    low_trust     = device_trust_score < 40,
+    high_velocity = velocity_last_24h >= 5
+  )
+
+# ---- 2. Build plot_df directly from known-good columns --------------------
+plot_df <- model_data |>
+  select(amount_log, velocity_last_24h, device_trust_score,
+         cardholder_age, is_fraud)
+
+# ---- 3. Verify every column has data --------------------------------------
+cat("Rows:", nrow(plot_df), "\n")
+print(colSums(is.na(plot_df)))
+print(table(plot_df$is_fraud, useNA = "ifany"))
+
+# Hard stop if anything is wrong
+stopifnot(
+  nrow(plot_df) == 9999,
+  all(colSums(is.na(plot_df)) == 0),
+  "fraud" %in% levels(plot_df$is_fraud)
+)
+
+# ---- 4. Pair plot ---------------------------------------------------------
+pal <- c("fraud" = "#B22222", "legit" = "#4682B4")
+
+p7_cor <- suppressMessages(
+  ggpairs(
+    plot_df,
+    aes(colour = is_fraud, fill = is_fraud),
+    lower = list(continuous = wrap("points", size = 0.35, alpha = 0.3)),
+    upper = list(continuous = "blank"),
+    diag  = list(continuous = wrap("barDiag", bins = 25, alpha = 0.7)),
+    progress = FALSE
+  ) +
+    scale_colour_manual(values = pal) +
+    scale_fill_manual(values   = pal) +
+    labs(title = "Fraud separates on amount x velocity",
+         caption = "Figure 7 - Pair plot") +
+    theme_eda()
+)
+
+print(p7_cor)
+```
+
+## Why this graph was selected
+A pair plot (scatterplot matrix) simultaneously shows every pairwise scatter plus the distribution of each variable plus the correlation values. It is the single most information-dense diagnostic in EDA, best used to scan for structure before committing to a model.
+
+## Interpretation
+Fraud points (red) separate most visibly on the amount_log × velocity_24h panel — the same joint pattern seen in graph 3.
+
+cardholder_age shows marginal separation: fraud is denser among younger cardholders.
+
+device_trust_score shows weak separation — a lower tail exists for fraud but the bulk overlaps with legit.
+
+## Unusual observations
+Fraud points are sparse (150 red dots among 9,849 grey) — the eye must actively look for density.
+
+Diagonal histograms use different bin counts than graph 1 (30 default) — the message stat_bin() using bins = 30 is emitted once per variable. Not an error, just an informational nudge.
+
+High overlap in most panels — the only pairs that separate visually are those combining amount and velocity.
+
+transaction_hour not included because it is cyclical — better shown as a density plot per hour (candidate for an extra visual).
+
+
+
+## Violin plot — Trust score by category
+```{r}
+library(tidyverse)
+
+# ---- 1. Rebuild model_data from source (guaranteed clean) -----------------
+model_data <- data |>
+  filter(amount > 0) |>
+  mutate(
+    is_fraud            = factor(is_fraud,            levels = c(1, 0),
+                                 labels = c("fraud", "legit")),
+    foreign_transaction = factor(foreign_transaction, levels = c(1, 0),
+                                 labels = c("yes", "no")),
+    location_mismatch   = factor(location_mismatch,   levels = c(1, 0),
+                                 labels = c("yes", "no")),
+    amount_log    = log1p(amount),
+    is_night      = transaction_hour %in% 0:5,
+    low_trust     = device_trust_score < 40,
+    high_velocity = velocity_last_24h >= 5
+  )
+
+# ---- 2. Palette + theme (reuse from earlier chunks) ----------------------
+pal <- c("fraud" = "#B22222", "legit" = "#4682B4")
+
+theme_eda <- function() {
+  theme_minimal(base_size = 12) +
+    theme(
+      plot.title       = element_text(face = "bold", size = 14),
+      plot.subtitle    = element_text(colour = "grey30", size = 10,
+                                      margin = margin(b = 10)),
+      plot.caption     = element_text(colour = "grey50", size = 8,
+                                      face = "italic"),
+      panel.grid.minor = element_blank(),
+      legend.position  = "bottom"
+    )
+}
+
+# ---- 3. Violin plot ------------------------------------------------------
+p8 <- ggplot(model_data,
+             aes(x = reorder(merchant_category, device_trust_score, median),
+                 y = device_trust_score,
+                 fill = merchant_category)) +
+  geom_violin(trim = FALSE, alpha = 0.7, colour = NA) +
+  geom_boxplot(width = 0.12, fill = "white",
+               outlier.size = 0.5, outlier.alpha = 0.4) +
+  scale_fill_manual(values = c("#4682B4", "#5F9EA0", "#7B9F76",
+                                "#DAA520", "#8B6B8B")) +
+  labs(
+    title    = "Device trust is identical across categories",
+    subtitle = "Trust does not explain category-level fraud differences",
+    x        = NULL,
+    y        = "Device trust score (0-100)",
+    caption  = "Figure 8 - Distribution of trust score by category"
+  ) +
+  theme_eda() +
+  theme(legend.position = "none",
+        axis.text.x     = element_text(angle = 20, hjust = 1))
+
+print(p8)
+```
+
+## Why this graph was selected
+A violin plot combines the density shape (like a smoothed histogram) with the summary statistics of a boxplot — ideal for comparing distributions across categories when there may be multiple modes or shapes that a boxplot would hide.
+
+## Interpretation
+All five categories have near-identical trust-score distributions — centred around 60–65, with a similar IQR (roughly 50–78).
+
+This confirms that merchant category does not drive device trust — fraud in Electronics is not explained by lower trust in that category.
+
+The fraud signal must therefore come from other variables or interactions, not category-level trust differences.
+
+## Unusual observations
+The violins are almost bimodal — two humps: one at trust ≈ 40 and another at ≈ 80. The shape suggests that trust scores may be generated from two populations (good/bad devices) rather than one continuous distribution.
+
+Left tails extend to 25–30 — devices with very low trust exist in every category, but do not dominate any single one.
+
+No trim (trim = FALSE) — the violins extend to the true min/max, revealing that extreme tails exist across all categories, not just fraud-heavy ones.
+
+Non-overlap between categories was expected but not found — this is the most counter-intuitive finding, and it is what pushes the analysis toward multivariate (tree) modelling rather than single-variable rules.
+
+
+

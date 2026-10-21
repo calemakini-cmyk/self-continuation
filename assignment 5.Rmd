@@ -1,0 +1,192 @@
+---
+title: 'session 8, assignment 5: time series analysis'
+author: "MAKINI Caleb"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+             
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo        = TRUE,          # show the code in HTML
+  tidy        = TRUE,          # run formatR on the code
+  tidy.opts   = list(
+    comment     = FALSE,       # <-- STRIP "#" comments from displayed code
+    blank       = FALSE,       # drop blank lines
+    widthCutoff = 120          # keep long lines readable
+  ),
+  comment     = NA,            # hide the "##" prefix on output
+  warning     = FALSE,
+  message     = FALSE,
+  eval        = TRUE,
+  fig.align   = "center",
+  fig.width   = 10,
+  fig.height  = 6,
+  dpi         = 120,
+  dev         = "png",
+  fig.show    = "asis",
+  fig.keep    = "all",
+  out.width   = "100%"
+)
+                      
+```
+
+# setting working directory
+```{r}
+setwd("C:/Users/ADMIN/OneDrive/Desktop/caleb makini")
+```
+
+
+# loading libraries
+
+```{r}
+library(ggplot2)
+library(ggthemes)
+library(stats)
+library(forecast)
+library(tseries)
+library(formatR)
+library(papaja)
+library(dplyr)
+library(tidyverse)
+
+```
+
+
+
+
+# import data
+```{r}
+data<-read.csv("tsassign.csv")
+head(data)
+```
+
+
+
+# structure
+```{r}
+str(data)
+```
+
+
+
+```{r}
+temp_ts<-ts(data$Temperature,start=c(2024,1), end=c(2025,12),frequency=4 )
+plot(temp_ts,main="Temperature trend", 
+     col="green",
+
+     )
+```
+
+
+
+
+
+
+
+
+```{r}
+#Decompose time series data
+
+#create a time series object
+
+temp_ts<-ts(data$Temperature, frequency = 12, start = c(2024, 1))
+
+# decompose time series
+
+decomposed_hgh<-decompose(temp_ts)
+
+# plot the decompostion
+
+plot(decomposed_hgh)
+
+```
+
+
+
+
+
+```{r}
+# Autocorrelation function
+
+acf(temp_ts, lag.max=20)
+```
+
+
+
+
+
+
+```{r}
+# partial autocorrelation of data
+
+pacf(temp_ts, lag.max=20)
+```
+
+
+
+
+
+
+```{r}
+# check stationality using (Augmented dickey Fuller test (ADF))
+
+adf_reslt<-adf.test(temp_ts)  # if p-value<5%, the series is stationary
+
+print(adf_reslt)
+
+# series not stationary since p-value is greater than 5%
+
+
+
+```
+
+
+
+
+
+```{r}
+# buid ana ARIMA model
+
+# fit arim,a model
+
+arima_model1<- auto.arima(temp_ts)
+summary(arima_model1)
+```
+
+
+
+
+
+
+
+```{r}
+# forecasting future format
+
+forecast_arima1<- forecast(arima_model1, h=10)
+head(forecast_arima1)
+# forecast next 6 periods
+
+plot(forecast_arima1)
+```
+
+
+
+
+
+```{r}
+# if p-value> 5%, we take 2nd difference
+
+diff2_hgh<-diff(temp_ts)
+
+plot(diff2_hgh, main=" differenced time series data", col="red")
+adf.test(diff2_hgh)
+```
+
+
+
+
+
+
+
+

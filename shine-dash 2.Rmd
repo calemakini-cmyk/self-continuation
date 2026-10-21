@@ -1,0 +1,1076 @@
+---
+title: "Shine dashboard_ machine learning"
+author: "MAKINI CALEB"
+date: "`r Sys.Date()`"
+output: html_document
+---
+             
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo        = TRUE,          # show the code in HTML
+  tidy        = TRUE,          # run formatR on the code
+  tidy.opts   = list(
+    comment     = FALSE,       # <-- STRIP "#" comments from displayed code
+    blank       = FALSE,       # drop blank lines
+    widthCutoff = 120          # keep long lines readable
+  ),
+  comment     = NA,            # hide the "##" prefix on output
+  warning     = FALSE,
+  message     = FALSE,
+  eval        = TRUE,
+  fig.align   = "center",
+  fig.width   = 10,
+  fig.height  = 6,
+  dpi         = 120,
+  dev         = "png",
+  fig.show    = "asis",
+  fig.keep    = "all",
+  out.width   = "100%"
+)
+                      
+```
+
+
+
+
+# setting the working directory
+```{r}
+setwd("C:/Users/ADMIN/OneDrive/Desktop/caleb makini")
+```
+
+
+
+```{r}
+# ============================================================
+#  MAKINI CALEB · BSc Maths — Data Science Portfolio Dashboard
+#  Fully working version with navigation
+# ============================================================
+
+# ---------------- Libraries ----------------
+library(shiny)
+library(bslib)
+library(htmltools)
+library(dplyr)
+library(stringr)
+
+# ============================================================
+#  PROJECT DATASET
+# ============================================================
+projects <- data.frame(
+  id = 1:24,
+  title = c(
+    "R for Data Science",
+    "Advanced Data Filtering",
+    "Advanced Data Cleaning",
+    "Data Cleaning Deep-Dive",
+    "Advanced Data Visualization",
+    "Descriptive Statistics & EDA",
+    "Data Manipulation with dplyr",
+    "Visualization & Hypothesis Testing",
+    "Correlation, Regression & ANOVA",
+    "ANOVA & Non-Parametric Tests",
+    "SVM & XGBoost Classification",
+    "K-Nearest Neighbors",
+    "Logistic Regression",
+    "Random Forest Regression",
+    "Random Forest — House Prices",
+    "Random Forest Classification",
+    "XGBoost Regression",
+    "XGBoost Classification",
+    "K-Means Clustering",
+    "Principal Component Analysis",
+    "Time Series Analysis I",
+    "Time Series & ARIMA",
+    "Explainable AI (DALEX)",
+    "Customer Transactions EDA"
+  ),
+  category = c(
+    "Foundations","Foundations","Foundations","Foundations","Foundations",
+    "Statistics","Statistics","Statistics","Statistics","Statistics",
+    "Supervised ML","Supervised ML","Supervised ML","Supervised ML",
+    "Supervised ML","Supervised ML","Supervised ML","Supervised ML",
+    "Unsupervised ML","Unsupervised ML",
+    "Time Series","Time Series",
+    "Advanced","Projects"
+  ),
+  summary = c(
+    "Advanced tidyverse wrangling — filter, select, mutate, pivot and joins with real datasets.",
+    "Subsetting with filter() using single, double and multi-condition logic across GSS data.",
+    "Handling missing values, mean/median/mode imputation, scaling and outlier treatment.",
+    "Iterative outlier removal with 1.5×IQR, median replacement and confirmation boxplots.",
+    "Custom ggplot themes, facets, violins, ridge plots, interactive and 3D visualisations.",
+    "Summary statistics, distributions, skewness and data clean-up on student performance data.",
+    "Filtering, grouping, mutating, arranging and reshaping with the car MPG dataset.",
+    "Histograms, boxplots, chi-square tests and a complete hypothesis-testing suite with kable tables.",
+    "Pearson & Spearman correlation, simple/multiple regression, ANOVA and assumption diagnostics.",
+    "One-way and two-way ANOVA, Tukey HSD, Kruskal–Wallis and Wilcoxon rank-sum tests.",
+    "Linear vs RBF SVM, hyperparameter tuning, XGBoost and ROC-based model comparison.",
+    "KNN for classification and regression with cross-validated k selection on loan data.",
+    "Binary logistic regression with glm(), probability predictions and confusion matrix.",
+    "Random Forest regression on mtcars with feature importance and diagnostic plots.",
+    "Random Forest regression predicting house prices from synthetic listing data with dummy encoding.",
+    "Random Forest classification on the Iris dataset with proximity and variable importance.",
+    "XGBoost regression for house price prediction with feature importance and evaluation.",
+    "XGBoost classification on the diabetes dataset with ROC, metrics and business framing.",
+    "K-Means clustering on mall customers with elbow and silhouette methods for k selection.",
+    "PCA for dimensionality reduction — scree plots, loadings and component interpretation.",
+    "Seasonal decomposition, ACF/PACF, ADF tests and ARIMA forecasting on temperature data.",
+    "Time series modelling of monthly temperature with auto-ARIMA and differencing.",
+    "Global and local explanations of a Random Forest classifier using DALEX.",
+    "End-to-end EDA on e-commerce transaction data with insights, plots and business conclusions."
+  ),
+  tools = c(
+    "tidyverse,dplyr,tidyr",
+    "dplyr,filter",
+    "dplyr,readxl,rio",
+    "base R,IQR,dplyr",
+    "ggplot2,plotly,ggiraph,sf",
+    "psych,dplyr,ggplot2",
+    "dplyr,tidyverse",
+    "ggplot2,kableExtra,stats",
+    "broom,car,lmtest,nortest",
+    "car,kruskal.test,aov",
+    "e1071,xgboost,pROC,caret",
+    "class,FNN,caret,Metrics",
+    "glm,caret,report",
+    "randomForest,caret",
+    "randomForest,dummyVars",
+    "randomForest,caret",
+    "xgboost,caret,Metrics",
+    "xgboost,pROC,caret",
+    "cluster,factoextra",
+    "prcomp,corrplot",
+    "forecast,tseries,stats",
+    "forecast,tseries,auto.arima",
+    "DALEX,randomForest,xgboost",
+    "ggplot2,dplyr,psych,gridExtra"
+  ),
+  icon = c(
+    "book-open","filter","broom","magic","palette",
+    "chart-simple","table-cells","chart-pie","chart-line","flask",
+    "bolt","circle-nodes","wave-square","tree","house",
+    "seedling","rocket","heart-pulse","braille","compress",
+    "arrow-trend-up","clock","eye","cart-shopping"
+  ),
+  featured = c(
+    FALSE,FALSE,FALSE,FALSE,FALSE,
+    FALSE,FALSE,FALSE,TRUE,FALSE,
+    TRUE,FALSE,FALSE,FALSE,FALSE,
+    FALSE,FALSE,FALSE,FALSE,TRUE,
+    FALSE,FALSE,TRUE,FALSE
+  ),
+  stringsAsFactors = FALSE
+)
+
+cat_colors <- c(
+  "Foundations"     = "#38bdf8",
+  "Statistics"      = "#a78bfa",
+  "Supervised ML"   = "#fbbf24",
+  "Unsupervised ML" = "#34d399",
+  "Time Series"     = "#f472b6",
+  "Advanced"        = "#fb7185",
+  "Projects"        = "#818cf8"
+)
+
+# ============================================================
+#  CUSTOM CSS
+# ============================================================
+custom_css <- "
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700;9..144,900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root{
+  --ink:#0b1220;
+  --ink-2:#1e293b;
+  --muted:#64748b;
+  --line:rgba(148,163,184,.18);
+  --surface:#ffffff;
+  --bg:#f6f7fb;
+  --brand:#4f46e5;
+  --brand-2:#06b6d4;
+  --gold:#f5b301;
+  --nav-bg:#0b1220;
+}
+
+*{box-sizing:border-box;}
+body{
+  font-family:'Inter',system-ui,sans-serif;
+  color:var(--ink);
+  background:
+    radial-gradient(1200px 700px at -10% -20%, #e0e7ff 0%, transparent 55%),
+    radial-gradient(1000px 600px at 110% 0%, #cffafe 0%, transparent 50%),
+    linear-gradient(180deg,#f8fafc 0%, #eef2f7 100%);
+  background-attachment: fixed;
+  min-height:100vh;
+  margin:0;
+}
+h1,h2,h3,h4{font-family:'Fraunces',serif; font-weight:700; letter-spacing:-.02em;}
+code, pre, .mono{font-family:'JetBrains Mono',monospace;}
+
+/* -------- Navbar -------- */
+.navbar{
+  background: linear-gradient(90deg,#0b1220 0%, #111a33 50%, #0b1220 100%) !important;
+  border-bottom:1px solid rgba(148,163,184,.15) !important;
+  box-shadow: 0 8px 30px rgba(2,6,23,.35);
+  padding:.35rem 1rem;
+}
+.navbar .navbar-brand{
+  color:#f8fafc !important;
+  font-weight:700;
+  font-family:'Fraunces',serif;
+  letter-spacing:-.01em;
+  display:flex; align-items:center; gap:10px;
+}
+.brand-dot{
+  width:30px; height:30px; border-radius:9px;
+  background: linear-gradient(135deg, var(--gold), #ff8a00);
+  display:inline-flex; align-items:center; justify-content:center;
+  color:#0b1220; font-weight:900; font-size:.95rem;
+  box-shadow: 0 6px 18px rgba(245,179,1,.45);
+}
+.navbar .nav-link{
+  color:#cbd5e1 !important;
+  font-weight:500; font-size:.92rem;
+  padding:.5rem .95rem !important;
+  border-radius:10px;
+  transition: all .2s ease;
+}
+.navbar .nav-link:hover{ color:#fff !important; background:rgba(255,255,255,.06); }
+.navbar .nav-link.active{
+  color:#fff !important;
+  background: linear-gradient(135deg, rgba(99,102,241,.25), rgba(6,182,212,.25));
+  box-shadow: inset 0 0 0 1px rgba(148,163,184,.25);
+}
+.nav-cta{
+  color:#f8fafc !important; background: rgba(245,179,1,.15);
+  border:1px solid rgba(245,179,1,.35);
+  border-radius:10px; padding:.45rem .9rem;
+  font-weight:600; font-size:.88rem;
+  text-decoration:none; display:inline-flex; align-items:center; gap:6px;
+  transition: all .2s ease;
+}
+.nav-cta:hover{ background: rgba(245,179,1,.28); transform: translateY(-1px); }
+
+/* -------- Layout -------- */
+.page-wrap{max-width:1240px; margin:0 auto; padding: 22px 26px 40px;}
+.section-title{
+  font-size:1.65rem; font-weight:700; font-family:'Fraunces',serif;
+  margin: 6px 0 18px; display:flex; align-items:center; gap:12px;
+}
+.section-title::before{
+  content:''; display:inline-block; width:6px; height:28px; border-radius:4px;
+  background: linear-gradient(180deg, var(--gold), #ff8a00);
+}
+.section-sub{ color:var(--muted); font-size:.95rem; margin:-12px 0 22px; }
+
+/* -------- Hero -------- */
+.hero{
+  position:relative; overflow:hidden;
+  padding: 68px 44px 60px;
+  border-radius: 26px;
+  background:
+    radial-gradient(900px 400px at 15% 0%, rgba(99,102,241,.35), transparent 60%),
+    radial-gradient(800px 400px at 90% 100%, rgba(6,182,212,.28), transparent 55%),
+    linear-gradient(135deg, #0b1220 0%, #131c3a 60%, #0a1e2e 100%);
+  color:#f8fafc;
+  box-shadow: 0 30px 70px -20px rgba(11,18,32,.55);
+  border:1px solid rgba(148,163,184,.12);
+  margin-bottom: 26px;
+}
+.hero::before{
+  content:''; position:absolute; inset:0;
+  background-image:
+    radial-gradient(circle at 12% 22%, rgba(245,179,1,.35) 0 1px, transparent 2px),
+    radial-gradient(circle at 78% 60%, rgba(6,182,212,.35) 0 1px, transparent 2px),
+    radial-gradient(circle at 55% 80%, rgba(255,255,255,.2) 0 1px, transparent 2px);
+  background-size: 340px 340px, 420px 420px, 260px 260px;
+  opacity:.55; pointer-events:none;
+}
+.hero::after{
+  content:''; position:absolute; top:-40%; right:-10%; width:520px; height:520px;
+  background: radial-gradient(circle, rgba(245,179,1,.22), transparent 65%);
+  filter: blur(30px);
+  animation: floaty 14s ease-in-out infinite;
+  pointer-events:none;
+}
+@keyframes floaty{
+  0%,100%{ transform: translate3d(0,0,0) scale(1); }
+  50%    { transform: translate3d(-30px,20px,0) scale(1.06); }
+}
+
+.hero-inner{ position:relative; z-index:2; max-width: 780px; }
+.eyebrow{
+  display:inline-flex; align-items:center; gap:8px;
+  background: rgba(245,179,1,.14); color:#fbbf24;
+  border:1px solid rgba(245,179,1,.3);
+  padding:6px 14px; border-radius:999px;
+  font-size:.74rem; letter-spacing:.16em; text-transform:uppercase;
+  font-weight:700;
+  margin-bottom:22px;
+}
+.eyebrow .dot{
+  width:6px; height:6px; border-radius:50%;
+  background:#fbbf24; box-shadow:0 0 0 4px rgba(245,179,1,.2);
+  animation: pulse 2s infinite;
+}
+@keyframes pulse{
+  0%,100%{ box-shadow:0 0 0 4px rgba(245,179,1,.2); }
+  50%    { box-shadow:0 0 0 8px rgba(245,179,1,.05); }
+}
+.hero-name{
+  font-family:'Fraunces',serif;
+  font-weight:900;
+  font-size: clamp(2.3rem, 5vw, 3.6rem);
+  line-height:1.02;
+  margin:0 0 12px;
+  letter-spacing:-.03em;
+}
+.hero-name .accent{
+  background: linear-gradient(135deg, #fbbf24 0%, #fb7185 55%, #a78bfa 100%);
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+}
+.hero-role{
+  display:inline-flex; align-items:center; gap:10px;
+  font-size:1.05rem; color:#e2e8f0; font-weight:500;
+  margin: 0 0 16px;
+  padding: 6px 16px 6px 12px;
+  background: rgba(255,255,255,.05);
+  border:1px solid rgba(148,163,184,.2);
+  border-radius:999px;
+}
+.hero-role .degree-tag{
+  background: linear-gradient(135deg,#fbbf24,#f97316);
+  color:#0b1220; font-weight:800;
+  padding:2px 10px; border-radius:999px; font-size:.78rem;
+  letter-spacing:.03em;
+}
+.hero-bio{
+  font-size:1.02rem; line-height:1.65; color:#cbd5e1;
+  max-width: 620px; margin: 6px 0 26px;
+}
+.hero-badges{ display:flex; flex-wrap:wrap; gap:10px; margin-bottom:26px; }
+.hero-badges .chip{
+  display:inline-flex; align-items:center; gap:8px;
+  padding:8px 14px; border-radius:999px;
+  background: rgba(255,255,255,.06);
+  border:1px solid rgba(148,163,184,.22);
+  color:#e2e8f0; font-size:.85rem; font-weight:500;
+  backdrop-filter: blur(4px);
+  transition: all .2s ease;
+}
+.hero-badges .chip:hover{
+  background: rgba(255,255,255,.12);
+  transform: translateY(-2px);
+}
+.hero-badges .chip i{ color:#fbbf24; }
+.hero-cta{ display:flex; gap:12px; flex-wrap:wrap; }
+.btn-gold{
+  background: linear-gradient(135deg,#fbbf24 0%, #f97316 100%) !important;
+  color:#0b1220 !important; font-weight:700 !important;
+  border:none !important; border-radius:12px !important;
+  padding:12px 24px !important;
+  box-shadow: 0 12px 30px rgba(251,191,36,.35) !important;
+  transition: transform .2s ease !important;
+}
+.btn-gold:hover{ transform: translateY(-2px); }
+.btn-ghost{
+  background: rgba(255,255,255,.06) !important;
+  color:#f8fafc !important;
+  border:1px solid rgba(148,163,184,.3) !important;
+  border-radius:12px !important;
+  padding:12px 22px !important;
+  font-weight:600 !important;
+  text-decoration:none !important;
+  display:inline-flex; align-items:center; gap:8px;
+  transition: all .2s ease;
+}
+.btn-ghost:hover{ background: rgba(255,255,255,.14) !important; transform: translateY(-2px); }
+
+/* -------- KPI strip -------- */
+.kpi-grid{
+  display:grid; grid-template-columns: repeat(4, 1fr);
+  gap:18px; margin-bottom: 30px;
+}
+@media (max-width: 900px){ .kpi-grid{ grid-template-columns: repeat(2, 1fr);} }
+.kpi{
+  padding:22px 22px;
+  border-radius:18px;
+  background: linear-gradient(160deg, #ffffff 0%, #f8fafc 100%);
+  border:1px solid var(--line);
+  box-shadow: 0 10px 30px -12px rgba(15,23,42,.14);
+  transition: all .25s ease;
+  position:relative; overflow:hidden;
+}
+.kpi:hover{ transform: translateY(-4px); box-shadow: 0 18px 40px -14px rgba(79,70,229,.28); }
+.kpi::before{
+  content:''; position:absolute; left:0; top:0; bottom:0; width:4px;
+  background: linear-gradient(180deg, #4f46e5, #06b6d4);
+}
+.kpi.gold::before{ background: linear-gradient(180deg, #fbbf24, #f97316); }
+.kpi.emerald::before{ background: linear-gradient(180deg, #34d399, #059669); }
+.kpi.rose::before{ background: linear-gradient(180deg, #fb7185, #e11d48); }
+.kpi-label{
+  font-size:.72rem; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--muted); font-weight:700; margin-bottom:6px;
+}
+.kpi-value{
+  font-family:'Fraunces',serif; font-weight:800;
+  font-size:2rem; line-height:1; color:var(--ink);
+}
+.kpi-sub{ font-size:.8rem; color:var(--muted); margin-top:6px; }
+
+/* -------- Project cards -------- */
+.grid{
+  display:grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap:20px;
+}
+.pcard{
+  padding:22px;
+  border-radius:18px;
+  background: var(--surface);
+  border:1px solid var(--line);
+  box-shadow: 0 8px 24px -12px rgba(15,23,42,.12);
+  transition: transform .28s ease, box-shadow .28s ease, border-color .28s ease;
+  cursor:pointer;
+  position:relative; overflow:hidden;
+  display:flex; flex-direction:column;
+  min-height: 250px;
+}
+.pcard::after{
+  content:''; position:absolute; inset:auto -30% -40% auto; width:180px; height:180px;
+  background: radial-gradient(circle, rgba(79,70,229,.08), transparent 70%);
+  transition: transform .35s ease; pointer-events:none;
+}
+.pcard:hover{
+  transform: translateY(-6px);
+  box-shadow: 0 22px 44px -18px rgba(79,70,229,.35);
+  border-color: rgba(79,70,229,.28);
+}
+.pcard:hover::after{ transform: scale(1.3); }
+.pcard-head{
+  display:flex; justify-content:space-between; align-items:flex-start;
+  margin-bottom:16px;
+}
+.pcard-icon{
+  width:44px; height:44px; border-radius:12px;
+  display:inline-flex; align-items:center; justify-content:center;
+  color:#fff; font-size:1.05rem;
+  box-shadow: 0 10px 22px -8px rgba(15,23,42,.35);
+}
+.pcard-cat{
+  font-size:.68rem; letter-spacing:.14em; text-transform:uppercase;
+  font-weight:800; padding:5px 10px; border-radius:999px;
+  background: #f1f5f9; color:#475569;
+  border:1px solid var(--line);
+}
+.pcard-title{
+  font-family:'Fraunces',serif; font-weight:700;
+  font-size:1.15rem; margin:0 0 8px; color:var(--ink);
+  letter-spacing:-.01em;
+}
+.pcard-summary{
+  font-size:.88rem; color:var(--ink-2); line-height:1.55;
+  margin:0 0 16px; flex-grow:1;
+}
+.pcard-tags{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:14px; }
+.pcard-tag{
+  font-family:'JetBrains Mono',monospace;
+  font-size:.68rem; padding:3px 8px; border-radius:6px;
+  background: #eef2ff; color:#4338ca;
+  border:1px solid rgba(99,102,241,.18);
+}
+.pcard-footer{
+  display:flex; align-items:center; justify-content:space-between;
+  font-size:.78rem; color:var(--muted); font-weight:600;
+  border-top:1px solid var(--line); padding-top:12px;
+}
+.pcard-footer .arrow{ transition: transform .28s ease; }
+.pcard:hover .pcard-footer .arrow{ transform: translateX(4px); color:var(--brand); }
+
+/* -------- Filter bar -------- */
+.filter-bar{
+  display:flex; flex-wrap:wrap; gap:10px; align-items:center;
+  margin-bottom:24px; padding: 14px 18px;
+  background: rgba(255,255,255,.8);
+  border:1px solid var(--line);
+  border-radius:16px;
+  backdrop-filter: blur(8px);
+}
+.filter-bar .form-control,
+.filter-bar .form-select{
+  border-radius:10px !important;
+  border:1px solid rgba(148,163,184,.35) !important;
+  font-size:.9rem;
+  padding:9px 14px;
+  background:#fff;
+}
+.filter-bar .form-control:focus,
+.filter-bar .form-select:focus{
+  border-color: var(--brand) !important;
+  box-shadow: 0 0 0 4px rgba(79,70,229,.12) !important;
+}
+
+/* -------- Skills -------- */
+.skills-grid{
+  display:grid; grid-template-columns: repeat(auto-fill, minmax(320px,1fr));
+  gap:20px;
+}
+.skill-card{
+  padding:24px; border-radius:18px;
+  background: linear-gradient(160deg,#ffffff 0%, #f8fafc 100%);
+  border:1px solid var(--line);
+  box-shadow: 0 10px 30px -14px rgba(15,23,42,.14);
+  transition: all .25s ease;
+}
+.skill-card:hover{ transform: translateY(-4px); border-color: rgba(79,70,229,.3); }
+.skill-card h4{
+  font-family:'Fraunces',serif; font-size:1.15rem; margin:0 0 14px;
+  display:flex; align-items:center; gap:10px;
+}
+.skill-card h4 i{ color: var(--brand); }
+.skill-row{
+  display:flex; justify-content:space-between; align-items:center;
+  margin: 10px 0; font-size:.88rem; color:var(--ink-2);
+}
+.skill-bar{
+  height:8px; background:#e2e8f0; border-radius:6px; overflow:hidden;
+  margin: 6px 0 14px;
+}
+.skill-bar span{
+  display:block; height:100%; border-radius:6px;
+  background: linear-gradient(90deg, #4f46e5, #06b6d4);
+}
+.skill-bar.gold span{ background: linear-gradient(90deg, #fbbf24, #f97316); }
+.skill-bar.emerald span{ background: linear-gradient(90deg, #34d399, #059669); }
+
+/* -------- About -------- */
+.about-card{
+  padding:32px; border-radius:20px;
+  background: linear-gradient(160deg,#ffffff 0%, #f8fafc 100%);
+  border:1px solid var(--line);
+  box-shadow: 0 14px 40px -16px rgba(15,23,42,.18);
+  margin-bottom:20px;
+}
+.about-card p{ font-size:.96rem; line-height:1.75; color:var(--ink-2); }
+.about-card h3{
+  font-family:'Fraunces',serif; margin-top:0; color:var(--ink);
+  display:flex; align-items:center; gap:10px;
+}
+.about-card h3 i{ color: var(--gold); }
+
+/* -------- Modal -------- */
+.modal-content{
+  border-radius:22px !important; border:none !important;
+  box-shadow: 0 40px 100px -20px rgba(11,18,32,.55) !important;
+  overflow:hidden;
+}
+.modal-header{
+  background: linear-gradient(135deg, #0b1220 0%, #1e293b 100%);
+  color:#f8fafc; border:none !important;
+  padding: 24px 28px;
+}
+.modal-header .modal-title{
+  font-family:'Fraunces',serif; font-weight:700; font-size:1.35rem;
+}
+.modal-body{ padding: 26px 28px 30px; }
+.modal-footer{ border-top:1px solid var(--line) !important; padding:16px 24px; }
+.modal .cat-badge{
+  font-size:.68rem; letter-spacing:.14em; text-transform:uppercase;
+  font-weight:800; padding:5px 12px; border-radius:999px;
+  background: rgba(255,255,255,.12); color:#f8fafc;
+  border:1px solid rgba(255,255,255,.2);
+}
+.modal .tag{
+  display:inline-block; font-family:'JetBrains Mono',monospace;
+  font-size:.72rem; padding:4px 10px; border-radius:8px;
+  background:#eef2ff; color:#4338ca; margin: 2px 6px 2px 0;
+  border:1px solid rgba(99,102,241,.18);
+}
+
+/* -------- Footer -------- */
+.footer{
+  text-align:center; padding: 34px 20px 6px;
+  color: var(--muted); font-size:.86rem;
+}
+.footer .heart{ color:#e11d48; }
+.footer .brand-mark{
+  font-family:'Fraunces',serif; font-weight:700; color:var(--ink);
+}
+
+.mb-20{ margin-bottom:20px; }
+.mt-24{ margin-top:24px; }
+
+::-webkit-scrollbar{ width:10px; height:10px; }
+::-webkit-scrollbar-track{ background:#eef2f7; }
+::-webkit-scrollbar-thumb{ background:#cbd5e1; border-radius:8px; }
+::-webkit-scrollbar-thumb:hover{ background:#94a3b8; }
+"
+
+# ============================================================
+#  UI HELPERS
+# ============================================================
+make_card <- function(p){
+  accent <- cat_colors[[p$category]]
+  tags_list <- strsplit(p$tools, ",")[[1]]
+  tools_tags <- lapply(tags_list, function(t) span(class="pcard-tag", trimws(t)))
+
+  div(class = "pcard",
+      onclick = sprintf(
+        "Shiny.setInputValue('card_clicked', %d, {priority:'event'});", p$id),
+      div(class="pcard-head",
+          div(class="pcard-icon",
+              style=sprintf("background: linear-gradient(135deg, %s, %s);",
+                            accent, accent),
+              icon(p$icon)),
+          span(class="pcard-cat", p$category)
+      ),
+      h3(class="pcard-title", p$title),
+      p(class="pcard-summary", p$summary),
+      div(class="pcard-tags", tools_tags),
+      div(class="pcard-footer",
+          span("View project"),
+          span(class="arrow", icon("arrow-right"))
+      )
+  )
+}
+
+make_kpi <- function(label, value, sub, variant = ""){
+  div(class = paste("kpi", variant),
+      div(class="kpi-label", label),
+      div(class="kpi-value", value),
+      div(class="kpi-sub", sub)
+  )
+}
+
+# ============================================================
+#  THEME
+# ============================================================
+app_theme <- bs_theme(
+  version = 5,
+  primary = "#4f46e5",
+  secondary = "#06b6d4",
+  success = "#34d399",
+  warning = "#fbbf24",
+  danger = "#e11d48",
+  bg = "#f6f7fb",
+  fg = "#0b1220",
+  base_font = font_google("Inter"),
+  heading_font = font_google("Fraunces"),
+  code_font = font_google("JetBrains Mono")
+)
+
+# ============================================================
+#  UI  (with id = "navbar" so nav_select works)
+# ============================================================
+ui <- page_navbar(
+  id = "navbar",
+  title = div(class="brand-dot", "M"),
+  window_title = "Makini Caleb · Portfolio",
+  theme = app_theme,
+  fillable = FALSE,
+  header = tags$head(tags$style(HTML(custom_css))),
+
+  # ---------------- HOME ----------------
+  nav_panel(
+    title = "Home", value = "Home", icon = icon("house"),
+    div(class="page-wrap",
+
+      div(class="hero",
+        div(class="hero-inner",
+          div(class="eyebrow",
+              span(class="dot"), "PORTFOLIO · 2025"),
+          h1(class="hero-name",
+             "Makini ", span(class="accent", "Caleb")),
+          div(class="hero-role",
+              span("BSc Maths", class="degree-tag"),
+              span("Data Scientist · Statistician · R Programmer")
+          ),
+          p(class="hero-bio",
+            "A curated showcase of 24 R projects spanning data cleaning, statistical
+             inference, machine learning and time-series forecasting — built end-to-end
+             with the tidyverse, caret, e1071, xgboost, forecast and more."),
+          div(class="hero-badges",
+              span(class="chip", icon("chart-line"), "Statistics"),
+              span(class="chip", icon("brain"), "Machine Learning"),
+              span(class="chip", icon("code"), "R Programming"),
+              span(class="chip", icon("database"), "Data Wrangling"),
+              span(class="chip", icon("clock"), "Time Series"),
+              span(class="chip", icon("eye"), "Explainable AI")
+          ),
+          div(class="hero-cta",
+              actionButton("go_portfolio",
+                           tagList(icon("arrow-right"), "Explore Portfolio"),
+                           class="btn-gold"),
+              actionButton("go_about",
+                           tagList(icon("user"), "About Me"),
+                           class="btn-ghost")
+          )
+        )
+      ),
+
+      div(class="kpi-grid",
+          make_kpi("Total Projects", "24", "R Markdown notebooks"),
+          make_kpi("Disciplines", "7", "Foundations → Advanced", "gold"),
+          make_kpi("ML Models Trained", "9+", "SVM · XGB · RF · KNN · KMeans", "emerald"),
+          make_kpi("Languages", "R", "tidyverse · caret · shiny", "rose")
+      ),
+
+      div(class="section-title", "Featured Work"),
+      p(class="section-sub",
+        "Hand-picked projects that best demonstrate analytical depth and technical range."),
+      div(class="grid",
+          lapply(which(projects$featured), function(i) make_card(projects[i, ]))
+      ),
+
+      div(class="hero mt-24", style="padding:38px 40px;",
+          div(class="hero-inner", style="max-width:none; text-align:center;",
+              h2(style="color:#f8fafc; font-family:'Fraunces',serif; margin:0 0 10px;",
+                 "Want the full portfolio?"),
+              p(style="color:#cbd5e1; margin:0 0 22px; max-width:640px; margin-left:auto; margin-right:auto;",
+                "Browse all 24 projects organised by discipline, with tools, techniques
+                 and a deeper summary for each."),
+              actionButton("go_portfolio2",
+                           tagList(icon("layer-group"), "Open Portfolio"),
+                           class="btn-gold")
+          )
+      ),
+
+      div(class="footer",
+          "© 2025 · ", span(class="brand-mark", "Makini Caleb · BSc Maths"),
+          " — Crafted with ", span(class="heart", "♥"), " in R Shiny"
+      )
+    )
+  ),
+
+  # ---------------- PORTFOLIO ----------------
+  nav_panel(
+    title = "Portfolio", value = "Portfolio", icon = icon("layer-group"),
+    div(class="page-wrap",
+      div(class="section-title", "Full Portfolio"),
+      p(class="section-sub",
+        "24 projects across seven disciplines. Use the filters to narrow the view."),
+
+      div(class="filter-bar",
+          div(style="flex-grow:1; min-width:220px;",
+              textInput("search", NULL,
+                        placeholder = "🔍  Search projects, tools, topics…")
+          ),
+          div(style="min-width:200px;",
+              selectInput("cat_filter", NULL,
+                          choices = c("All categories",
+                                      sort(unique(projects$category))),
+                          selected = "All categories")
+          ),
+          div(class="mono",
+              style="font-size:.82rem; color:#64748b; padding:0 12px;",
+              textOutput("result_count", inline = TRUE))
+      ),
+
+      uiOutput("project_grid"),
+
+      div(class="footer",
+          "© 2025 · ", span(class="brand-mark", "Makini Caleb · BSc Maths")
+      )
+    )
+  ),
+
+  # ---------------- SKILLS ----------------
+  nav_panel(
+    title = "Skills", value = "Skills", icon = icon("wand-magic-sparkles"),
+    div(class="page-wrap",
+      div(class="section-title", "Skills & Tooling"),
+      p(class="section-sub",
+        "The stack behind every project — languages, libraries and statistical methods."),
+
+      div(class="skills-grid",
+
+        div(class="skill-card",
+            h4(icon("code"), "Programming Languages"),
+            div(class="skill-row", span("R"), span("Advanced")),
+            div(class="skill-bar", span(style="width:94%")),
+            div(class="skill-row", span("SQL (basic)"), span("Intermediate")),
+            div(class="skill-bar", span(style="width:60%")),
+            div(class="skill-row", span("Python (basic)"), span("Intermediate")),
+            div(class="skill-bar", span(style="width:55%")),
+            div(class="skill-row", span("R Markdown"), span("Advanced")),
+            div(class="skill-bar", span(style="width:90%"))
+        ),
+
+        div(class="skill-card",
+            h4(icon("chart-line"), "Statistical Methods"),
+            div(class="skill-row", span("Hypothesis Testing"), span("Advanced")),
+            div(class="skill-bar gold", span(style="width:92%")),
+            div(class="skill-row", span("Regression & ANOVA"), span("Advanced")),
+            div(class="skill-bar gold", span(style="width:90%")),
+            div(class="skill-row", span("Time Series (ARIMA)"), span("Intermediate")),
+            div(class="skill-bar gold", span(style="width:78%")),
+            div(class="skill-row", span("Experimental Design"), span("Intermediate")),
+            div(class="skill-bar gold", span(style="width:70%"))
+        ),
+
+        div(class="skill-card",
+            h4(icon("brain"), "Machine Learning"),
+            div(class="skill-row", span("Supervised (SVM, RF, XGB)"), span("Advanced")),
+            div(class="skill-bar emerald", span(style="width:88%")),
+            div(class="skill-row", span("Unsupervised (KMeans, PCA)"), span("Advanced")),
+            div(class="skill-bar emerald", span(style="width:82%")),
+            div(class="skill-row", span("Model Evaluation"), span("Advanced")),
+            div(class="skill-bar emerald", span(style="width:86%")),
+            div(class="skill-row", span("Explainable AI (DALEX)"), span("Intermediate")),
+            div(class="skill-bar emerald", span(style="width:72%"))
+        ),
+
+        div(class="skill-card",
+            h4(icon("broom"), "Data Wrangling"),
+            div(class="skill-row", span("tidyverse / dplyr"), span("Advanced")),
+            div(class="skill-bar", span(style="width:95%")),
+            div(class="skill-row", span("tidyr / reshaping"), span("Advanced")),
+            div(class="skill-bar", span(style="width:90%")),
+            div(class="skill-row", span("Missing data & outliers"), span("Advanced")),
+            div(class="skill-bar", span(style="width:88%")),
+            div(class="skill-row", span("Joins & filtering"), span("Advanced")),
+            div(class="skill-bar", span(style="width:92%"))
+        ),
+
+        div(class="skill-card",
+            h4(icon("palette"), "Visualization"),
+            div(class="skill-row", span("ggplot2"), span("Advanced")),
+            div(class="skill-bar gold", span(style="width:94%")),
+            div(class="skill-row", span("plotly / interactive"), span("Intermediate")),
+            div(class="skill-bar gold", span(style="width:78%")),
+            div(class="skill-row", span("kableExtra / reporting"), span("Advanced")),
+            div(class="skill-bar gold", span(style="width:88%")),
+            div(class="skill-row", span("R Shiny dashboards"), span("Intermediate")),
+            div(class="skill-bar gold", span(style="width:75%"))
+        ),
+
+        div(class="skill-card",
+            h4(icon("flask"), "Key Libraries"),
+            div(class="pcard-tags", style="margin-top:6px;",
+                span(class="pcard-tag","tidyverse"), span(class="pcard-tag","dplyr"),
+                span(class="pcard-tag","ggplot2"), span(class="pcard-tag","tidyr"),
+                span(class="pcard-tag","caret"), span(class="pcard-tag","e1071"),
+                span(class="pcard-tag","xgboost"), span(class="pcard-tag","randomForest"),
+                span(class="pcard-tag","class/FNN"), span(class="pcard-tag","pROC"),
+                span(class="pcard-tag","forecast"), span(class="pcard-tag","tseries"),
+                span(class="pcard-tag","cluster"), span(class="pcard-tag","factoextra"),
+                span(class="pcard-tag","corrplot"), span(class="pcard-tag","broom"),
+                span(class="pcard-tag","car"), span(class="pcard-tag","lmtest"),
+                span(class="pcard-tag","DALEX"), span(class="pcard-tag","kableExtra"),
+                span(class="pcard-tag","plotly"), span(class="pcard-tag","shiny"),
+                span(class="pcard-tag","rio"), span(class="pcard-tag","readxl")
+            )
+        )
+      ),
+
+      div(class="footer",
+          "© 2025 · ", span(class="brand-mark", "Makini Caleb · BSc Maths")
+      )
+    )
+  ),
+
+  # ---------------- ABOUT ----------------
+  nav_panel(
+    title = "About", value = "About", icon = icon("user"),
+    div(class="page-wrap",
+      div(class="section-title", "About"),
+
+      div(class="about-card",
+          h3(icon("graduation-cap"), "Education"),
+          p(strong("BSc Mathematics"),
+            " — a rigorous foundation in real analysis, linear algebra,
+             probability, statistical inference and mathematical modelling.
+             My studies gave me the mathematical maturity to move fluently
+             between theory and practical implementation in R.")
+      ),
+
+      div(class="about-card",
+          h3(icon("chart-line"), "Data Science Practice"),
+          p("Across 24 hands-on projects I have worked with the complete R data-science
+            stack — from raw Excel/CSV import, cleaning and missing-value imputation,
+            through exploratory analysis, hypothesis testing, regression and ANOVA,
+            to modern machine learning with SVM, XGBoost, Random Forests, KNN, K-Means,
+            PCA and ARIMA time-series models. I document every project in reproducible
+            R Markdown notebooks with tables and publication-quality plots.")
+      ),
+
+      div(class="about-card",
+          h3(icon("wand-magic-sparkles"), "What I Bring"),
+          tags$ul(style="padding-left:20px; line-height:1.9; color:var(--ink-2);",
+            tags$li("Mathematical rigour — proofs, assumptions and diagnostics, not just code."),
+            tags$li("Reproducibility — R Markdown, seeds, tidy pipelines, clear narratives."),
+            tags$li("Model literacy — training, tuning, evaluation, ROC/AUC, confusion matrices."),
+            tags$li("Communication — clean visualisations and interpretation for non-technical readers."),
+            tags$li("Continuous learning — from Foundations through to Explainable AI.")
+          )
+      ),
+
+      div(class="about-card",
+          h3(icon("paper-plane"), "Get in Touch"),
+          p("The full source of every project is available on request. I am open to
+            internships, research collaborations and data-science opportunities."),
+          div(class="hero-cta",
+              tags$a(href="mailto:makini.caleb@example.com",
+                     class="btn-gold",
+                     icon("envelope"), " Email"),
+              tags$a(href="#", class="btn-ghost",
+                     icon("file-lines"), " Download CV")
+          )
+      ),
+
+      div(class="footer",
+          "© 2025 · ", span(class="brand-mark", "Makini Caleb · BSc Maths"),
+          " — Built with ", span(class="heart", "♥"), " in R Shiny"
+      )
+    )
+  ),
+
+  nav_spacer(),
+  nav_item(
+    tags$a(href="https://github.com/", target="_blank", class="nav-cta",
+           icon("github"), "GitHub")
+  )
+)
+
+# ============================================================
+#  SERVER
+# ============================================================
+server <- function(input, output, session){
+
+  # -------- Safe null-coalesce helper (must be defined first) --------
+  `%||%` <- function(a, b){
+    if (is.null(a) || length(a) == 0 || is.na(a)) b else a
+  }
+
+  # -------- Navigation from Home tab --------
+  observeEvent(input$go_portfolio, {
+    bslib::nav_select(id = "navbar", selected = "Portfolio")
+  })
+  observeEvent(input$go_portfolio2, {
+    bslib::nav_select(id = "navbar", selected = "Portfolio")
+  })
+  observeEvent(input$go_about, {
+    bslib::nav_select(id = "navbar", selected = "About")
+  })
+
+  # -------- Reactive filter --------
+  filtered <- reactive({
+    df <- projects
+
+    if (!is.null(input$cat_filter) && input$cat_filter != "All categories") {
+      df <- df[df$category == input$cat_filter, , drop = FALSE]
+    }
+
+    q <- trimws(tolower(input$search %||% ""))
+    if (nzchar(q)) {
+      haystack <- tolower(paste(df$title, df$summary, df$tools, df$category))
+      df <- df[str_detect(haystack, fixed(q)), , drop = FALSE]
+    }
+    df
+  })
+
+  output$result_count <- renderText({
+    n <- nrow(filtered())
+    sprintf("%d project%s", n, if (n == 1) "" else "s")
+  })
+
+  output$project_grid <- renderUI({
+    df <- filtered()
+    if (nrow(df) == 0){
+      return(div(style = "padding:60px 20px; text-align:center; color:#64748b;",
+                 icon("magnifying-glass",
+                      style="font-size:2.2rem; margin-bottom:14px;"),
+                 h3(style="font-family:'Fraunces',serif;",
+                    "No projects match your filters."),
+                 p("Try clearing the search box or choosing a different category.")))
+    }
+    div(class = "grid",
+        lapply(seq_len(nrow(df)), function(i) make_card(df[i, ])))
+  })
+
+  # -------- Card modal --------
+  observeEvent(input$card_clicked, {
+    req(input$card_clicked)
+    p <- projects[projects$id == input$card_clicked, , drop = FALSE]
+    req(nrow(p) == 1)
+    accent <- cat_colors[[p$category]]
+    tags_list <- trimws(strsplit(p$tools, ",")[[1]])
+
+    showModal(modalDialog(
+      easyClose = TRUE,
+      size = "l",
+      title = tagList(
+        span(class = "cat-badge", p$category),
+        span(style = "margin-left:14px;", p$title)
+      ),
+      div(
+        div(style = "display:flex; align-items:center; gap:16px; margin-bottom:20px;",
+            div(style = sprintf(
+                  "width:56px; height:56px; border-radius:14px;
+                   background: linear-gradient(135deg, %s, %s);
+                   display:flex; align-items:center; justify-content:center;
+                   color:#fff; font-size:1.4rem;
+                   box-shadow: 0 12px 28px -10px %s;",
+                  accent, accent, accent),
+                icon(p$icon)
+            ),
+            div(
+              h3(style = "margin:0; font-family:'Fraunces',serif;", p$title),
+              div(style = "color:#64748b; font-size:.85rem; font-weight:600;",
+                  p$category, " · Project ", p$id, " of 24")
+            )
+        ),
+
+        h4(style = "font-family:'Fraunces',serif; margin: 12px 0 8px;",
+           "Overview"),
+        p(style = "font-size:1rem; line-height:1.7; color:#1e293b;", p$summary),
+
+        h4(style = "font-family:'Fraunces',serif; margin: 22px 0 10px;",
+           "Tools & Techniques"),
+        div(style = "display:flex; flex-wrap:wrap; gap:6px;",
+            lapply(tags_list, function(t) span(class = "tag", t))
+        ),
+
+        div(style = "margin-top:26px; padding:16px 20px;
+                    background:linear-gradient(135deg,#eef2ff,#ecfeff);
+                    border-radius:14px;
+                    border:1px solid rgba(99,102,241,.18);
+                    font-size:.9rem; color:#3730a3;",
+            icon("circle-info"),
+            " This project is documented as a fully reproducible R Markdown
+              notebook with code, outputs, tables and visualisations."
+        )
+      ),
+      footer = tagList(
+        modalButton("Close"),
+        tags$button(class = "btn btn-primary",
+                    style = "background: linear-gradient(135deg,#4f46e5,#06b6d4);
+                             border:none; border-radius:10px; padding:9px 20px;
+                             font-weight:600;",
+                    icon("download"), " Request Source")
+      )
+    ))
+  })
+}
+
+# ============================================================
+#  RUN
+# ============================================================
+shinyApp(ui, server)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

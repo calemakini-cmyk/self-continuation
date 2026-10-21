@@ -1,0 +1,402 @@
+---
+title: " Intermediate Level: R for Data Science"
+author: "MAKINI CALEB"
+date: "`r Sys.Date()`"
+output: html_document
+    
+---
+
+             
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo        = TRUE,          # show the code in HTML
+  tidy        = TRUE,          # run formatR on the code
+  tidy.opts   = list(
+    comment     = FALSE,       # <-- STRIP "#" comments from displayed code
+    blank       = FALSE,       # drop blank lines
+    widthCutoff = 120          # keep long lines readable
+  ),
+  comment     = NA,            # hide the "##" prefix on output
+  warning     = FALSE,
+  message     = FALSE,
+  eval        = TRUE,
+  fig.align   = "center",
+  fig.width   = 10,
+  fig.height  = 6,
+  dpi         = 120,
+  dev         = "png",
+  fig.show    = "asis",
+  fig.keep    = "all",
+  out.width   = "100%"
+)
+                      
+```
+# Intermediate Level: R for Data Science
+Designed for learners who already have basic R programming skills (e.g., familiarity with syntax, data structures, and simple data manipulation).
+
+## Prerequisites:
+ •	Basic R programming (vectors, data frames, loops, functions).
+ 
+ •	Familiarity with dplyr, ggplot2, and basic statistics.
+ 
+ •	Experience importing/exporting data in R.
+
+## Duration: 4-6 Sessions | Level: Intermediate
+
+## Course Objectives:
+By the end of this course, students will:
+
+1.	Master advanced data wrangling and visualization techniques.
+
+2.	Apply statistical and machine learning models to real-world datasets.
+
+3.	Write efficient, reproducible R code using best practices.
+
+4.	Work with APIs, web scraping, and relational databases in R.
+
+5.	Build interactive dashboards and reports for data storytelling.
+
+## Session 1: Advanced Data Wrangling with tidyverse
+
+# Set a working Directory
+```{r}
+setwd("C:/Users/ADMIN/OneDrive/Desktop/caleb makini")
+```
+
+
+## Load required libraries
+```{r}
+library(tidyverse)
+library(dplyr)
+```
+
+
+## Data importation
+```{r}
+gss <- read.csv("gsssubset.csv")
+head(gss)
+```
+
+
+# Filter function
+### filter() - subset rows
+### Single Filtering Function
+```{r}
+filtered_data <- gss%>%
+  filter(marital=="MARRIED")
+head(filtered_data, 10)
+```
+
+### Double Filtering Function
+```{r}
+filtered_data1 <- gss%>%
+  filter(marital=="MARRIED"|
+           marital=="DIVORCED")
+head(filtered_data1, 10)
+```
+
+
+# Double filter for education level
+```{r}
+filtered_data2 <- gss%>%
+  filter(degree=="BACHELOR"|
+           degree == "GRADUATE")
+head(filtered_data2, 10)
+```
+
+
+
+### Multiple Filtering Function for Different Variables [Match Operator Function]
+```{r}
+gss_degree <- gss %>%
+  filter(
+    degree %in% c("BACHELOR", "GRADUATE", "JUNIOR COLLEGE"),
+    marital %in% c("MARRIED", "DIVORCED"),
+    sex %in% c("MALE") 
+  )
+
+head(gss_degree)
+```
+
+
+## get the table of multiple filter
+```{r}
+table(gss_degree$marital,gss_degree$degree)
+```
+
+
+# perform chi-square using the above results
+```{r}
+chisq.test(table(gss_degree$marital,gss_degree$degree))
+```
+
+### Select Functions (Selecting Columns of Interest)
+```{r}
+selected_data <- gss%>%
+  select(sex, degree, income, marital, age, hrswrk)
+
+head(selected_data)
+```
+
+## mutate() - create new variables from the existing ones
+```{r}
+mutated_data <- gss%>%
+  mutate(Salary_Category = if_else(income >=50000, "High Income", "Low Income"))
+
+head(mutated_data)
+```
+
+## arrange() - reorder rows
+```{r}
+arranged_data <- gss%>%
+  arrange(income)
+```
+
+
+# descending order arrangement
+```{r}
+arranged_data <- gss%>%
+  arrange(desc(income))
+```
+
+
+# summarise() - reduce data to summaries
+```{r}
+summarized_data <- gss%>%
+  group_by(degree)%>%
+  summarize(Mean_Income = mean(income),
+            Median_Income = median(income),
+            Min_Income = min(income),
+            Max_Income = max(income))%>%
+  arrange(Mean_Income)
+
+summarized_data
+```
+
+
+## Convert Data from Wider to Long Format and Vise Versa
+```{r}
+# pivot_longer() - wide to long format
+# pivot_wider() - long to wide format
+# separate() / unite() - split or combine columns
+# drop_na() / replace_na() - handle missing values
+```
+
+
+# sample dataset
+```{r}
+grades_wide <- tibble(
+  student = c("Alice", "Bob", "Charlie"),
+  math_2023 = c(85, 92, NA),
+  math_2024 = c(88, 90, 85),
+  science_2023 = c(78, NA, 80),
+  science_2024 = c(82, 85, 88)
+)
+head(grades_wide)
+```
+
+
+# pivot_longer() 
+# Purpose: Gather multiple columns into two new columns: one for the original column names (names_to) and one for the values (values_to).
+```{r}
+grades_long <- grades_wide |>
+  pivot_longer(
+    cols = -student,                # Keep 'student', reshape all others
+    names_to = c("subject", "year"),# Split column names into two new columns
+    names_sep = "_",                # Split at the underscore
+    values_to = "score"             # Name the new value column
+  )
+
+grades_long
+```
+
+
+
+# pivot_wider() → Long to Wide
+# Purpose: Reverse of pivot_longer(). Spreads key-value pairs back into multiple columns.
+```{r}
+grades_wide_back <- grades_long |>
+  pivot_wider(
+    names_from = c("subject", "year"), # Combine these to form new column names
+    names_sep = "_",                   # Join them with underscore
+    values_from = score                # Pull values from this column
+  )
+
+grades_wide_back
+```
+
+
+# separate() → Split One Column into Many
+# Purpose: Split a single character column into multiple columns using a delimiter or position.
+```{r}
+# Create a combined column for demonstration
+grades_long <- grades_long |>
+  mutate(course_code = str_c(subject, year, sep = "-")) # e.g., "math-2023"
+
+# Now split it back
+grades_split <- grades_long |>
+  separate(
+    col = course_code, 
+    into = c("subject", "year"), 
+    sep = "-", 
+    convert = TRUE # Automatically converts "2023" to numeric
+  )
+
+glimpse(grades_split)
+```
+
+
+# unite() → Combine Multiple Columns into One
+# Purpose: Reverse of separate(). Merges columns into a single string column.
+```{r}
+grades_united <- grades_split |>
+  unite(
+    col = "course_combined",     # Name of new column
+    c("subject", "year"),        # Columns to combine
+    sep = "_",                   # Separator between values
+    remove = TRUE                # Drop original columns
+  )
+
+head(grades_united)
+```
+
+
+
+#Advanced Joins with dplyr
+## There are different types of joins depending on how you want to merge datasets.
+
+```{r}
+df1 <- tibble(
+  id = c(1, 2, 3, 4),
+  name = c("Alice", "Bob", "Charlie", "David"))
+
+df2 <- tibble(
+  id = c(2, 3, 5),
+  score = c(85, 90, 78))
+```
+
+
+# Join Types:
+# nner_join() – Intersection (only matching keys)
+```{r}
+inner_join(df1, df2, by = "id")
+```
+
+
+# Full_join() – Union (all keys from both tables)
+```{r}
+full_join(df1, df2, by = "id")
+```
+
+
+# Semi_join() – Keep only observations in df1 that have matches in df2
+```{r}
+semi_join(df1, df2, by = "id") # Returns Alice, Bob, Charlie, David?
+```
+
+
+```{r}
+semi_join(df2, df1, by = "id") # Returns Alice, Bob, Charlie, David?
+```
+
+
+# Anti_join() – Opposite of semi_join; keep rows in df1 without match in df2
+```{r}
+anti_join(df1, df2, by = "id")
+```
+
+
+## Left Join Function
+# A left join retains all rows from the first table, adding matching data from the second and filling non-matches with NA
+```{r}
+left_join(df1, df2, by = "id")
+```
+
+
+## Right Join Function
+# A right join preserves all rows from the second table, appending matching data from the first and filling non-matches with NA.
+```{r}
+right_join(df1, df2, by = "id")
+```
+
+
+## Join Functions Using Real Data Sets from the Field
+```{r}
+inv_one <- read.csv("inv_1.csv")
+head(inv_one)
+inv_two <- read.csv("inv_2.csv")
+head(inv_two)
+```
+
+
+### View the Inventory Data sets
+```{r}
+head(inv_one,5)
+```
+
+
+### Convert Character Variable to Factor and Sales Date to Date
+```{r}
+#inv_one$Sale_Date <- as.Date(inv_one$Sale_Date)
+inv_one$Category <- as.factor(inv_one$Category)
+inv_one$Region <- as.factor(inv_one$Region)
+head(inv_one, 10)
+```
+
+
+```{r}
+head(inv_two, 10)
+```
+
+
+### Inner Join
+```{r}
+inner_join(inv_one, inv_two, by = "Product_ID")
+```
+
+
+### Left Join
+```{r}
+left_join(inv_one, inv_two, by = "Product_ID")
+```
+
+
+### Right Join
+```{r}
+right_join(inv_one, inv_two, by = "Product_ID")
+```
+
+## Reshaping Data with pivot_longer() and pivot_wider()
+```{r}
+library(dplyr)
+library(tidyr)
+library(stringr)
+library(lubridate)
+library(ggplot2)
+
+# In-built dataset
+data("airquality")  # Air pollution measurements in NYC, 1973
+head(airquality)
+```
+
+
+### Pivoting: convert wide to long
+```{r}
+long_df <- airquality %>%
+  pivot_longer(cols = c(Ozone, Solar.R, Wind, Temp), 
+               names_to = "variable", 
+               values_to = "value")
+
+long_df
+```
+
+
+### Pivoting: convert long to wide
+```{r}
+wide_df <- long_df %>%
+  pivot_wider(names_from = variable, values_from = value)
+
+wide_df
+```
+
+

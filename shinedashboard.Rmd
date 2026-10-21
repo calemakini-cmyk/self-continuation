@@ -1,0 +1,812 @@
+---
+title: "Classification / shiny dashboard"
+author: "MAKINI CALEB"
+date: "`r Sys.Date()`"
+output:
+  word_document: default
+  html_document: default
+---
+             
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo        = TRUE,          # show the code in HTML
+  tidy        = TRUE,          # run formatR on the code
+  tidy.opts   = list(
+    comment     = FALSE,       # <-- STRIP "#" comments from displayed code
+    blank       = FALSE,       # drop blank lines
+    widthCutoff = 120          # keep long lines readable
+  ),
+  comment     = NA,            # hide the "##" prefix on output
+  warning     = FALSE,
+  message     = FALSE,
+  eval        = TRUE,
+  fig.align   = "center",
+  fig.width   = 10,
+  fig.height  = 6,
+  dpi         = 120,
+  dev         = "png",
+  fig.show    = "asis",
+  fig.keep    = "all",
+  out.width   = "100%"
+)
+                      
+```
+
+
+
+
+# setting the working directory
+```{r}
+setwd("C:/Users/ADMIN/OneDrive/Desktop/caleb makini")
+```
+
+```{r}
+# ============================================================
+#  LOAN APPROVAL · ML STUDIO
+#  Interactive Shiny dashboard for the Machine Learning assignment
+#  Author: MAKINI CALEB
+# ============================================================
+
+# ---------- Libraries ----------
+suppressPackageStartupMessages({
+  library(shiny)
+  library(shinydashboard)
+  library(shinyWidgets)
+  library(DT)
+  library(ggplot2)
+  library(dplyr)
+  library(tidyr)
+  library(reshape2)
+  library(corrplot)
+  library(e1071)
+  library(caret)
+  library(xgboost)
+  library(pROC)
+  library(gridExtra)
+})
+
+# ---------- Global ----------
+NUM_VARS <- c("Age", "Income", "Credit_Score", "Loan_Amount", "Employment_Years")
+TARGET   <- "Loan_Approved"
+
+# =============================================================
+#  Helper functions (defined once, used everywhere)
+# =============================================================
+detect_outliers_IQR <- function(x) {
+  Q1 <- quantile(x, 0.25, na.rm = TRUE)
+  Q3 <- quantile(x, 0.75, na.rm = TRUE)
+  IQR <- Q3 - Q1
+  lower <- Q1 - 1.5 * IQR
+  upper <- Q3 + 1.5 * IQR
+  which(x < lower | x > upper)
+}
+
+get_mode <- function(x) {
+  ux <- unique(na.omit(x))
+  ux[which.max(tabulate(match(x, ux)))]
+}
+
+make_box <- function(df, vars = NUM_VARS) {
+  df[, vars, drop = FALSE] |>
+    scale() |>
+    as.data.frame() |>
+    tidyr::pivot_longer(everything(),
+                        names_to = "variable",
+                        values_to = "value") |>
+    ggplot(aes(variable, value, fill = variable)) +
+    geom_boxplot(outlier.colour = "red", outlier.size = 2) +
+    facet_wrap(~ variable, scales = "free") +
+    theme_minimal() +
+    theme(legend.position = "none") +
+    labs(x = NULL, y = NULL)
+}
+
+# =============================================================
+#  UI
+# =============================================================
+ui <- dashboardPage(
+  skin = "blue",
+
+  dashboardHeader(title = "Loan Approval • ML Dashboard", titleWidth = 320),
+
+  dashboardSidebar(
+    width = 300,
+    sidebarMenu(
+      id = "tabs",
+      menuItem("1. Data",          tabName = "data",    icon = icon("database")),
+      menuItem("2. Preprocessing", tabName = "prep",    icon = icon("broom")),
+      menuItem("3. EDA Plots",     tabName = "eda",     icon = icon("chart-bar")),
+      menuItem("4. Correlation",   tabName = "corr",    icon = icon("th")),
+      menuItem("5. SVM Model",     tabName = "svm",     icon = icon("project-diagram")),
+      menuItem("6. XGBoost Model", tabName = "xgb",     icon = icon("bolt")),
+      menuItem("7. Compare",       tabName = "compare", icon = icon("balance-scale")),
+      menuItem("8. Predict",       tabName = "predict", icon = icon("magic"))
+    ),
+    hr(),
+    fileInput("file", "Upload Loan CSV (optional)", accept = ".csv"),
+    helpText("If no file is uploaded, the bundled",
+             "`Loan_Approved data.csv` is used.",
+             "Required columns: Applicant_ID, Age, Income,",
+             "Credit_Score, Loan_Amount, Employment_Years,",
+             "Loan_Approved.")
+  ),
+
+  dashboardBody(
+    tags$head(tags$style(HTML("
+      .content-wrapper {background:#f4f6f9;}
+      .box {border-top-color:#2c3e50;}
+      .small-box h3 {font-size: 22px;}
+    "))),
+
+    tabItems(
+
+      # ================= 1. DATA =================
+      tabItem(tabName = "data",
+        fluidRow(
+          valueBoxOutput("vb_rows", width = 4),
+          valueBoxOutput("vb_cols", width = 4),
+          valueBoxOutput("vb_dups", width = 4)
+        ),
+        fluidRow(
+          box(title = "Raw data (head)", width = 12, status = "primary",
+              solidHeader = TRUE, DTOutput("raw_tbl"))
+        ),
+        fluidRow(
+          box(title = "Structure", width = 6, status = "info",
+              solidHeader = TRUE, verbatimTextOutput("str_out")),
+          box(title = "Missing values per column", width = 6,
+              status = "info", solidHeader = TRUE,
+              verbatimTextOutput("na_out"))
+        )
+      ),
+
+      # ================= 2. PREPROCESSING =================
+      tabItem(tabName = "prep",
+        fluidRow(
+          box(title = "Outlier detection (1.5 × IQR rule)", width = 12,
+              status = "warning", solidHeader = TRUE,
+              p("Outliers replaced iteratively by the column mode (max 10 passes)."),
+              verbatimTextOutput("outlier_out"))
+        ),
+        fluidRow(
+          box(title = "Before treatment", width = 6,
+              status = "danger", solidHeader = TRUE,
+              plotOutput("bp_before", height = 320)),
+          box(title = "After treatment", width = 6,
+              status = "success", solidHeader = TRUE,
+              plotOutput("bp_after", height = 320))
+        ),
+        fluidRow(
+          box(title = "Summary statistics (numerical)", width = 12,
+              status = "primary", solidHeader = TRUE,
+              DTOutput("stats_tbl"))
+        ),
+        fluidRow(
+          box(title = "Skewness", width = 12,
+              status = "primary", solidHeader = TRUE,
+              DTOutput("skew_tbl"))
+        )
+      ),
+
+      # ================= 3. EDA =================
+      tabItem(tabName = "eda",
+        fluidRow(
+          box(title = "Class distribution of Loan_Approved", width = 5,
+              status = "primary", solidHeader = TRUE,
+              plotOutput("pie_class", height = 340)),
+          box(title = "Count of Approved vs Rejected", width = 7,
+              status = "primary", solidHeader = TRUE,
+              plotOutput("bar_class", height = 340))
+        ),
+        fluidRow(
+          box(title = "Histogram of Credit_Score", width = 12,
+              status = "primary", solidHeader = TRUE,
+              plotOutput("hist_cs", height = 360))
+        ),
+        fluidRow(
+          box(title = "Income by Loan Approval (Q14)", width = 6,
+              status = "primary", solidHeader = TRUE,
+              plotOutput("box_income", height = 340)),
+          box(title = "Income vs Credit_Score (Q15)", width = 6,
+              status = "primary", solidHeader = TRUE,
+              plotOutput("scatter_inc_cs", height = 340))
+        )
+      ),
+
+      # ================= 4. CORRELATION =================
+      tabItem(tabName = "corr",
+        fluidRow(
+          box(title = "Correlation heatmap (Q17)", width = 12,
+              status = "primary", solidHeader = TRUE,
+              plotOutput("heatmap", height = 520))
+        ),
+        fluidRow(
+          box(title = "Correlation matrix (Q12)", width = 12,
+              status = "info", solidHeader = TRUE,
+              DTOutput("corr_tbl"))
+        )
+      ),
+
+      # ================= 5. SVM =================
+      tabItem(tabName = "svm",
+        fluidRow(
+          box(title = "SVM hyperparameters", width = 4, status = "primary",
+              solidHeader = TRUE,
+              sliderInput("svm_cost",  "Cost (C)", 0.1, 100, 1, step = 0.1),
+              sliderInput("svm_gamma", "Gamma",    0.01, 1,  0.1, step = 0.01),
+              radioButtons("svm_kernel", "Kernel",
+                           choices = c("radial", "linear"),
+                           selected = "radial", inline = TRUE),
+              actionBttn("train_svm", "Train SVM",
+                         style = "gradient", color = "primary",
+                         icon = icon("play"))
+          ),
+          box(title = "Model summary", width = 8, status = "info",
+              solidHeader = TRUE, verbatimTextOutput("svm_summary"))
+        ),
+        fluidRow(
+          box(title = "Confusion matrix", width = 6, status = "success",
+              solidHeader = TRUE, verbatimTextOutput("svm_cm")),
+          box(title = "Metrics", width = 6, status = "success",
+              solidHeader = TRUE, tableOutput("svm_metrics"))
+        ),
+        fluidRow(
+          box(title = "ROC curve — SVM (Q30)", width = 12, status = "success",
+              solidHeader = TRUE, plotOutput("svm_roc", height = 420))
+        )
+      ),
+
+      # ================= 6. XGBoost =================
+      tabItem(tabName = "xgb",
+        fluidRow(
+          box(title = "XGBoost hyperparameters", width = 4, status = "primary",
+              solidHeader = TRUE,
+              sliderInput("xgb_nrounds",  "nrounds", 20, 300, 100, step = 10),
+              sliderInput("xgb_depth",    "max_depth", 2, 10, 3),
+              sliderInput("xgb_eta",      "eta (learning rate)", 0.01, 0.5, 0.1, step = 0.01),
+              sliderInput("xgb_subsample","subsample", 0.5, 1, 0.8, step = 0.05),
+              sliderInput("xgb_colsample","colsample_bytree", 0.5, 1, 0.8, step = 0.05),
+              actionBttn("train_xgb", "Train XGBoost",
+                         style = "gradient", color = "primary",
+                         icon = icon("bolt"))
+          ),
+          box(title = "Model", width = 8, status = "info",
+              solidHeader = TRUE, verbatimTextOutput("xgb_summary"))
+        ),
+        fluidRow(
+          box(title = "Confusion matrix (Q35)", width = 6, status = "success",
+              solidHeader = TRUE, verbatimTextOutput("xgb_cm")),
+          box(title = "Metrics (Q36)", width = 6, status = "success",
+              solidHeader = TRUE, tableOutput("xgb_metrics"))
+        ),
+        fluidRow(
+          box(title = "ROC curve — XGBoost (Q37)", width = 6, status = "success",
+              solidHeader = TRUE, plotOutput("xgb_roc", height = 380)),
+          box(title = "Feature importance (Q38)", width = 6, status = "success",
+              solidHeader = TRUE, plotOutput("xgb_imp", height = 380))
+        )
+      ),
+
+      # ================= 7. COMPARE =================
+      tabItem(tabName = "compare",
+        fluidRow(
+          box(title = "Side-by-side metric comparison (Q39)", width = 12,
+              status = "primary", solidHeader = TRUE,
+              DTOutput("cmp_tbl"))
+        ),
+        fluidRow(
+          box(title = "Metric bar chart", width = 12,
+              status = "primary", solidHeader = TRUE,
+              plotOutput("cmp_plot", height = 420))
+        )
+      ),
+
+      # ================= 8. PREDICT =================
+      tabItem(tabName = "predict",
+        fluidRow(
+          box(title = "Applicant details", width = 5, status = "primary",
+              solidHeader = TRUE,
+              numericInput("p_age",    "Age",              35,    18, 100),
+              numericInput("p_income", "Income",           60000, 0,  1e6, step = 1000),
+              numericInput("p_credit", "Credit_Score",     650,   300, 900),
+              numericInput("p_loan",   "Loan_Amount",      20000, 0,  1e6, step = 500),
+              numericInput("p_emp",    "Employment_Years", 5,     0,  60),
+              radioButtons("p_model", "Model to use:",
+                           choices = c("SVM", "XGBoost"),
+                           selected = "SVM", inline = TRUE),
+              actionBttn("predict_btn", "Predict",
+                         style = "gradient", color = "success",
+                         icon = icon("check"))
+          ),
+          box(title = "Prediction", width = 7, status = "success",
+              solidHeader = TRUE,
+              uiOutput("pred_box"),
+              plotOutput("pred_gauge", height = 240))
+        )
+      )
+    )
+  )
+)
+
+# =============================================================
+#  SERVER
+# =============================================================
+server <- function(input, output, session) {
+
+  # ---------- Load data ----------
+  raw_data <- reactive({
+    df <- NULL
+    if (!is.null(input$file)) {
+      df <- tryCatch(read.csv(input$file$datapath, stringsAsFactors = FALSE),
+                     error = function(e) NULL)
+    }
+    if (is.null(df) && file.exists("Loan_Approved data.csv")) {
+      df <- read.csv("Loan_Approved data.csv", stringsAsFactors = FALSE)
+    }
+    if (is.null(df)) {
+      ## Fallback synthetic dataset identical in schema to the Rmd
+      set.seed(123)
+      n <- 592
+      income  <- c(runif(240, 17000, 42000), runif(352, 44000, 135000))
+      df <- data.frame(
+        Applicant_ID     = 1:n,
+        Age              = round(rnorm(n, 40, 10)),
+        Income           = round(income),
+        Credit_Score     = round(rnorm(n, 650, 110)),
+        Loan_Amount      = round(runif(n, 5000, 50000)),
+        Employment_Years = round(rnorm(n, 10, 5)),
+        Loan_Approved    = c(rep(0, 240), rep(1, 352))
+      )
+      df <- df[sample(nrow(df)), ]
+      df$Loan_Approved <- ifelse(df$Income > 43000, 1L, 0L)
+      rownames(df) <- NULL
+    }
+    ## Normalise the target
+    lv <- tolower(trimws(as.character(df$Loan_Approved)))
+    df$Loan_Approved <- factor(
+      ifelse(lv %in% c("yes", "y", "1", "true", "t"), "Yes", "No"),
+      levels = c("No", "Yes"))
+    df
+  })
+
+  # ---------- Cleaned data (outlier treatment) ----------
+  clean_data <- reactive({
+    df <- raw_data()
+    for (i in 1:10) {
+      n_rep <- 0
+      for (v in NUM_VARS) {
+        if (!v %in% names(df)) next
+        idx <- detect_outliers_IQR(df[[v]])
+        if (length(idx) > 0) {
+          df[[v]][idx] <- get_mode(df[[v]])
+          n_rep <- n_rep + length(idx)
+        }
+      }
+      if (n_rep == 0) break
+    }
+    df
+  })
+
+  # ---------- Train / test split ----------
+  split_data <- reactive({
+    set.seed(123)
+    idx <- createDataPartition(clean_data()$Loan_Approved, p = 0.8, list = FALSE)
+    list(train = clean_data()[idx, ],
+         test  = clean_data()[-idx, ])
+  })
+
+  # ---------- Pre-processing (train-only) ----------
+  preproc <- reactive({
+    sp <- split_data()
+    pp <- preProcess(sp$train[, NUM_VARS], method = c("center", "scale"))
+    list(pp      = pp,
+         x_train = predict(pp, sp$train[, NUM_VARS]),
+         x_test  = predict(pp, sp$test [, NUM_VARS]),
+         y_train = sp$train$Loan_Approved,
+         y_test  = sp$test$Loan_Approved,
+         train   = sp$train,
+         test    = sp$test)
+  })
+
+  # =========================================================
+  # 1. DATA tab
+  # =========================================================
+  output$vb_rows <- renderValueBox({
+    valueBox(nrow(raw_data()), "Rows", icon = icon("list"), color = "blue")
+  })
+  output$vb_cols <- renderValueBox({
+    valueBox(ncol(raw_data()), "Columns", icon = icon("columns"), color = "green")
+  })
+  output$vb_dups <- renderValueBox({
+    valueBox(sum(duplicated(raw_data())), "Duplicate rows",
+             icon = icon("clone"), color = "yellow")
+  })
+  output$raw_tbl <- renderDT({
+    datatable(head(raw_data(), 50),
+              options = list(scrollX = TRUE, pageLength = 10))
+  })
+  output$str_out <- renderPrint({ str(raw_data()) })
+  output$na_out  <- renderPrint({
+    na <- colSums(is.na(raw_data()))
+    if (all(na == 0)) cat("No missing values in any column.\n") else print(na)
+  })
+
+  # =========================================================
+  # 2. PREPROCESSING
+  # =========================================================
+  output$outlier_out <- renderPrint({
+    before <- sapply(raw_data()[, NUM_VARS], function(x) length(detect_outliers_IQR(x)))
+    after  <- sapply(clean_data()[, NUM_VARS], function(x) length(detect_outliers_IQR(x)))
+    res <- data.frame(Before = before, After = after)
+    print(res)
+    cat("\nTotal remaining outliers:", sum(after), "\n")
+  })
+
+  output$bp_before <- renderPlot({ make_box(raw_data()) })
+  output$bp_after  <- renderPlot({ make_box(clean_data()) })
+
+  output$stats_tbl <- renderDT({
+    df <- clean_data()[, NUM_VARS]
+    stats <- sapply(df, function(x) c(mean   = mean(x, na.rm = TRUE),
+                                      median = median(x, na.rm = TRUE),
+                                      sd     = sd(x, na.rm = TRUE),
+                                      min    = min(x, na.rm = TRUE),
+                                      max    = max(x, na.rm = TRUE)))
+    datatable(as.data.frame(t(stats)) |> tibble::rownames_to_column("Variable"),
+              options = list(dom = "t", scrollX = TRUE), rownames = FALSE)
+  })
+
+  output$skew_tbl <- renderDT({
+    sk <- sapply(clean_data()[, NUM_VARS], e1071::skewness, na.rm = TRUE)
+    df <- data.frame(
+      Variable  = names(sk),
+      Skewness  = round(sk, 3),
+      Direction = ifelse(sk > 0, "Right-skewed",
+                  ifelse(sk < 0, "Left-skewed", "Symmetric")),
+      Magnitude = ifelse(abs(sk) < 0.5, "Low",
+                  ifelse(abs(sk) < 1,   "Moderate", "High")),
+      row.names = NULL)
+    datatable(df, options = list(dom = "t"), rownames = FALSE)
+  })
+
+  # =========================================================
+  # 3. EDA
+  # =========================================================
+  output$pie_class <- renderPlot({
+    df <- as.data.frame(table(clean_data()$Loan_Approved))
+    names(df) <- c("Class", "Count")
+    df$Percent <- paste0(round(100 * df$Count / sum(df$Count), 1), "%")
+    ggplot(df, aes(x = "", y = Count, fill = Class)) +
+      geom_col(width = 1, colour = "white") +
+      coord_polar("y") +
+      geom_text(aes(label = paste0(Class, "\n", Percent)),
+                position = position_stack(vjust = .5),
+                colour = "white", size = 5, fontface = "bold") +
+      scale_fill_manual(values = c("No" = "tomato", "Yes" = "steelblue")) +
+      theme_void() + labs(title = "Class distribution")
+  })
+
+  output$bar_class <- renderPlot({
+    ggplot(clean_data(), aes(Loan_Approved, fill = Loan_Approved)) +
+      geom_bar() +
+      geom_text(stat = "count", aes(label = after_stat(count)),
+                vjust = -0.5, size = 5, fontface = "bold") +
+      scale_fill_manual(values = c("No" = "tomato", "Yes" = "steelblue")) +
+      theme_minimal() + theme(legend.position = "none") +
+      labs(title = "Approved vs Rejected", x = "Loan Approved", y = "Count")
+  })
+
+  output$hist_cs <- renderPlot({
+    x  <- clean_data()$Credit_Score
+    m  <- mean(x); md <- median(x); mo <- get_mode(x)
+    ggplot(clean_data(), aes(Credit_Score)) +
+      geom_histogram(bins = 20, fill = "steelblue", colour = "white") +
+      geom_vline(xintercept = m,  colour = "red",   linewidth = 1) +
+      geom_vline(xintercept = md, colour = "blue",  linetype = "dashed", linewidth = 1) +
+      geom_vline(xintercept = mo, colour = "green", linetype = "dotted", linewidth = 1) +
+      labs(title = "Credit_Score distribution (Q13)", y = "Frequency") +
+      theme_minimal()
+  })
+
+  output$box_income <- renderPlot({
+    ggplot(clean_data(), aes(Loan_Approved, Income, fill = Loan_Approved)) +
+      geom_boxplot(width = .5) +
+      stat_summary(fun = mean, geom = "point", shape = 23, size = 3, fill = "white") +
+      scale_fill_manual(values = c("No" = "tomato", "Yes" = "steelblue")) +
+      theme_minimal() + theme(legend.position = "none") +
+      labs(title = "Income by Loan Approval", x = "Loan Approved")
+  })
+
+  output$scatter_inc_cs <- renderPlot({
+    ggplot(clean_data(), aes(Income, Credit_Score, colour = Loan_Approved)) +
+      geom_point(size = 3, alpha = .7) +
+      geom_smooth(method = "lm", se = TRUE, color = "red", linetype = "dashed") +
+      scale_colour_manual(values = c("No" = "skyblue", "Yes" = "blue")) +
+      theme_minimal() +
+      labs(title = "Income vs Credit_Score")
+  })
+
+  # =========================================================
+  # 4. CORRELATION
+  # =========================================================
+  output$heatmap <- renderPlot({
+    cm <- cor(clean_data()[, NUM_VARS])
+    melted <- melt(cm)
+    melted$Var1 <- factor(melted$Var1, levels = NUM_VARS)
+    melted$Var2 <- factor(melted$Var2, levels = NUM_VARS)
+    ggplot(melted, aes(Var1, Var2, fill = value)) +
+      geom_tile(colour = "white", linewidth = .5) +
+      geom_text(aes(label = round(value, 2)), size = 3.5) +
+      scale_fill_gradient2(low = "tomato", mid = "white", high = "steelblue",
+                           midpoint = 0, limits = c(-1, 1), name = "r") +
+      coord_fixed() + theme_minimal() +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+      labs(title = "Correlation Heatmap", x = NULL, y = NULL)
+  })
+  output$corr_tbl <- renderDT({
+    cm <- round(cor(clean_data()[, NUM_VARS]), 3)
+    datatable(as.data.frame(cm) |> tibble::rownames_to_column("Variable"),
+              options = list(dom = "t", scrollX = TRUE), rownames = FALSE)
+  })
+
+  # =========================================================
+  # 5. SVM
+  # =========================================================
+  svm_model <- eventReactive(input$train_svm, {
+    pp <- preproc()
+    withProgress(message = "Training SVM...", value = 0.5, {
+      svm(x = pp$x_train, y = pp$y_train,
+          kernel = input$svm_kernel,
+          cost   = input$svm_cost,
+          gamma  = if (input$svm_kernel == "radial") input$svm_gamma else 1 / ncol(pp$x_train),
+          probability = TRUE, scale = FALSE)
+    })
+  })
+
+  output$svm_summary <- renderPrint({
+    req(svm_model()); summary(svm_model())
+  })
+
+  svm_preds <- reactive({
+    req(svm_model())
+    pp <- preproc()
+    p  <- predict(svm_model(), pp$x_test, probability = TRUE)
+    list(class = p,
+         prob  = attr(p, "probabilities")[, "Yes"],
+         truth = pp$y_test)
+  })
+
+  output$svm_cm <- renderPrint({
+    req(svm_preds())
+    cm <- confusionMatrix(svm_preds()$class, svm_preds()$truth, positive = "Yes")
+    print(cm$table)
+  })
+
+  output$svm_metrics <- renderTable({
+    req(svm_preds())
+    cm  <- confusionMatrix(svm_preds()$class, svm_preds()$truth, positive = "Yes")
+    auc <- as.numeric(pROC::auc(pROC::roc(svm_preds()$truth, svm_preds()$prob,
+                                          levels = c("No", "Yes"), quiet = TRUE)))
+    data.frame(
+      Metric = c("Accuracy", "Precision", "Recall", "F1", "Specificity", "AUC"),
+      Value  = round(c(cm$overall["Accuracy"],
+                       cm$byClass["Precision"],
+                       cm$byClass["Recall"],
+                       cm$byClass["F1"],
+                       cm$byClass["Specificity"],
+                       auc), 4))
+  }, striped = TRUE, hover = TRUE, bordered = TRUE)
+
+  output$svm_roc <- renderPlot({
+    req(svm_preds())
+    r <- pROC::roc(svm_preds()$truth, svm_preds()$prob,
+                   levels = c("No", "Yes"), quiet = TRUE)
+    plot(r, main = "ROC — SVM", col = "blue", lwd = 2, print.auc = TRUE)
+  })
+
+  # =========================================================
+  # 6. XGBoost
+  # =========================================================
+  xgb_model <- eventReactive(input$train_xgb, {
+    pp <- preproc()
+    x  <- as.matrix(pp$x_train)
+    y  <- as.integer(pp$y_train) - 1L
+    dt <- xgb.DMatrix(x, label = y)
+    withProgress(message = "Training XGBoost...", value = 0.5, {
+      xgb.train(
+        params = list(objective        = "binary:logistic",
+                      eval_metric      = "logloss",
+                      max_depth        = input$xgb_depth,
+                      eta              = input$xgb_eta,
+                      subsample        = input$xgb_subsample,
+                      colsample_bytree = input$xgb_colsample),
+        data = dt, nrounds = input$xgb_nrounds, verbose = 0)
+    })
+  })
+
+  output$xgb_summary <- renderPrint({ req(xgb_model()); print(xgb_model()) })
+
+  xgb_preds <- reactive({
+    req(xgb_model())
+    pp   <- preproc()
+    prob <- predict(xgb_model(), as.matrix(pp$x_test))
+    list(class = factor(ifelse(prob > .5, "Yes", "No"), levels = c("No", "Yes")),
+         prob  = prob,
+         truth = pp$y_test)
+  })
+
+  output$xgb_cm <- renderPrint({
+    req(xgb_preds())
+    cm <- confusionMatrix(xgb_preds()$class, xgb_preds()$truth, positive = "Yes")
+    print(cm$table)
+  })
+
+  output$xgb_metrics <- renderTable({
+    req(xgb_preds())
+    cm  <- confusionMatrix(xgb_preds()$class, xgb_preds()$truth, positive = "Yes")
+    auc <- as.numeric(pROC::auc(pROC::roc(xgb_preds()$truth, xgb_preds()$prob,
+                                          levels = c("No", "Yes"), quiet = TRUE)))
+    data.frame(
+      Metric = c("Accuracy", "Precision", "Recall", "F1", "Specificity", "AUC"),
+      Value  = round(c(cm$overall["Accuracy"],
+                       cm$byClass["Precision"],
+                       cm$byClass["Recall"],
+                       cm$byClass["F1"],
+                       cm$byClass["Specificity"],
+                       auc), 4))
+  }, striped = TRUE, hover = TRUE, bordered = TRUE)
+
+  output$xgb_roc <- renderPlot({
+    req(xgb_preds())
+    r <- pROC::roc(xgb_preds()$truth, xgb_preds()$prob,
+                   levels = c("No", "Yes"), quiet = TRUE)
+    plot(r, main = "ROC — XGBoost", col = "darkgreen", lwd = 2, print.auc = TRUE)
+  })
+
+  output$xgb_imp <- renderPlot({
+    req(xgb_model())
+    imp <- xgb.importance(model = xgb_model())
+    xgb.plot.importance(imp, main = "Feature Importance", col = "steelblue")
+  })
+
+  # =========================================================
+  # 7. COMPARE  (robust: handles "only one model trained")
+  # =========================================================
+  metric_names  <- c("Accuracy", "Precision", "Recall", "F1", "Specificity", "AUC")
+  empty_metrics <- function() setNames(rep(NA_real_, 6), metric_names)
+
+  safe_metrics <- function(preds) {
+    if (is.null(preds)) return(empty_metrics())
+    tryCatch({
+      cm  <- confusionMatrix(preds$class, preds$truth, positive = "Yes")
+      r   <- pROC::roc(preds$truth, preds$prob,
+                       levels = c("No", "Yes"), quiet = TRUE)
+      setNames(c(as.numeric(cm$overall["Accuracy"]),
+                 as.numeric(cm$byClass["Precision"]),
+                 as.numeric(cm$byClass["Recall"]),
+                 as.numeric(cm$byClass["F1"]),
+                 as.numeric(cm$byClass["Specificity"]),
+                 as.numeric(pROC::auc(r))), metric_names)
+    }, error = function(e) empty_metrics())
+  }
+
+  output$cmp_tbl <- renderDT({
+    svm_ready <- !is.null(input$train_svm) && input$train_svm > 0
+    xgb_ready <- !is.null(input$train_xgb) && input$train_xgb > 0
+
+    svm_m <- if (svm_ready) safe_metrics(svm_preds()) else empty_metrics()
+    xgb_m <- if (xgb_ready) safe_metrics(xgb_preds()) else empty_metrics()
+
+    df <- data.frame(Metric  = metric_names,
+                     SVM     = round(svm_m, 4),
+                     XGBoost = round(xgb_m, 4),
+                     row.names = NULL)
+
+    datatable(df,
+              options = list(dom = "t", pageLength = 10),
+              rownames = FALSE) |>
+      formatStyle(columns = 1:3, backgroundColor = "#f8f9fa")
+  })
+
+  output$cmp_plot <- renderPlot({
+    svm_ready <- !is.null(input$train_svm) && input$train_svm > 0
+    xgb_ready <- !is.null(input$train_xgb) && input$train_xgb > 0
+
+    validate(need(svm_ready || xgb_ready,
+                  "Train at least one model (SVM or XGBoost) to see the comparison."))
+
+    svm_m <- if (svm_ready) safe_metrics(svm_preds()) else rep(NA_real_, 6)
+    xgb_m <- if (xgb_ready) safe_metrics(xgb_preds()) else rep(NA_real_, 6)
+
+    df <- data.frame(
+      Metric = rep(metric_names, 2),
+      Model  = rep(c("SVM", "XGBoost"), each = 6),
+      Value  = c(svm_m, xgb_m))
+    df <- df[!is.na(df$Value), ]
+
+    ggplot(df, aes(Metric, Value, fill = Model)) +
+      geom_col(position = position_dodge(.8), width = .7) +
+      geom_text(aes(label = round(Value, 3)),
+                position = position_dodge(.8),
+                vjust = -0.4, size = 3.5) +
+      ylim(0, 1.1) +
+      scale_fill_manual(values = c(SVM = "#2980b9", XGBoost = "#27ae60")) +
+      theme_minimal(base_size = 13) +
+      labs(title = "SVM vs XGBoost — Test-set metrics",
+           y = "Score", x = NULL) +
+      theme(plot.title = element_text(face = "bold", hjust = .5),
+            legend.position = "top")
+  })
+
+  # =========================================================
+  # 8. PREDICT
+  # =========================================================
+  pred_result <- eventReactive(input$predict_btn, {
+    pp <- preproc()
+    newdf <- data.frame(
+      Age              = input$p_age,
+      Income           = input$p_income,
+      Credit_Score     = input$p_credit,
+      Loan_Amount      = input$p_loan,
+      Employment_Years = input$p_emp)
+    scaled <- predict(pp$pp, newdf)
+
+    if (input$p_model == "SVM") {
+      req(svm_model())
+      p    <- predict(svm_model(), scaled, probability = TRUE)
+      prob <- attr(p, "probabilities")[, "Yes"]
+      cls  <- as.character(p)
+    } else {
+      req(xgb_model())
+      prob <- predict(xgb_model(), as.matrix(scaled))
+      cls  <- ifelse(prob > .5, "Yes", "No")
+    }
+    list(class = cls, prob = as.numeric(prob))
+  })
+
+  output$pred_box <- renderUI({
+    r   <- pred_result()
+    col <- if (r$class == "Yes") "#27ae60" else "#e74c3c"
+    div(style = paste0("padding:20px; text-align:center; border-radius:8px; ",
+                       "background:", col, "; color:white;"),
+        h2(paste0("Prediction: ", r$class), style = "margin:0;"),
+        h4(paste0("Probability of approval: ",
+                  round(100 * r$prob, 2), "%"),
+           style = "margin-top:10px;"))
+  })
+
+  output$pred_gauge <- renderPlot({
+    r  <- pred_result()
+    df <- data.frame(x = "Approval", y = r$prob)
+    ggplot(df, aes(x, y)) +
+      geom_col(fill = if (r$prob > .5) "#27ae60" else "#e74c3c", width = .4) +
+      geom_hline(yintercept = .5, linetype = "dashed", colour = "grey40") +
+      ylim(0, 1) + coord_flip() +
+      labs(title = "Predicted probability of approval", x = NULL, y = NULL) +
+      theme_minimal() + theme(axis.text.y = element_blank())
+  })
+}
+
+shinyApp(ui, server)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,301 @@
+TransactionID,CustomerID,ProductID,Quantity,PaymentMethod,TransactionDate,ProductCategory,Price,Rating,TotalAmount,Age,Gender,Location,MembershipStatus
+1,207,14,5,UPI,12/28/2023,Clothing,33.36,4.2,166.8,50,Male,Houston,Basic
+2,253,15,1,Cash on Delivery,4/17/2023,Electronics,389.03,2.2,389.03,19,Female,Chicago,Premium
+3,110,19,5,Cash on Delivery,1/17/2023,Clothing,145.89,1.7,729.45,37,Female,Houston,Basic
+4,256,1,3,Debit Card,10/23/2023,Home Appliances,215.02,2.7,645.06,50,Male,Los Angeles,Premium
+5,274,2,5,Debit Card,6/30/2023,Home Appliances,325.48,3.4,1627.4,24,Male,New York,Premium
+6,52,15,2,Credit Card,6/14/2023,Electronics,389.03,2.2,778.06,50,Male,Houston,Premium
+7,191,10,1,Cash on Delivery,7/26/2023,Electronics,193.15,3.7,193.15,40,Male,Los Angeles,Gold
+8,165,5,5,Debit Card,5/23/2023,Clothing,350.44,1.4,1752.2,37,Male,Houston,Premium
+9,18,5,4,UPI,11/1/2023,Clothing,350.44,1.4,1401.76,25,Female,Houston,Premium
+10,169,17,2,Credit Card,12/3/2023,Electronics,280.91,1.9,561.82,53,Female,Chicago,Basic
+11,295,17,3,Debit Card,5/29/2023,Electronics,280.91,1.9,842.73,65,Male,Los Angeles,Gold
+12,271,18,3,UPI,6/7/2023,Home Appliances,341.4,3,1024.2,62,Male,Chicago,Basic
+13,177,2,4,Credit Card,6/13/2023,Home Appliances,325.48,3.4,1301.92,,Male,Chicago,Premium
+14,18,11,2,UPI,3/7/2023,Electronics,123.63,2.1,247.26,,Female,Houston,Premium
+15,35,5,4,UPI,1/12/2023,Clothing,350.44,1.4,1401.76,,Male,Houston,Gold
+16,198,17,1,UPI,10/10/2023,Electronics,280.91,1.9,280.91,,Female,Houston,Basic
+17,54,14,3,Credit Card,3/8/2023,Clothing,33.36,4.2,100.08,,Male,Chicago,Basic
+18,171,3,1,Credit Card,10/2/2023,Clothing,117.7,4.9,117.7,,Male,New York,Basic
+19,252,10,3,UPI,1/24/2023,Electronics,193.15,3.7,579.45,,Male,Houston,Gold
+20,73,13,2,Debit Card,6/13/2023,Clothing,243.41,5,486.82,,Female,Houston,Premium
+21,278,19,1,Cash on Delivery,11/30/2023,Clothing,145.89,1.7,145.89,34,Female,New York,Premium
+22,20,2,4,UPI,2/9/2023,Home Appliances,325.48,3.4,1301.92,24,Male,New York,Gold
+23,175,17,3,Credit Card,6/26/2023,Electronics,280.91,1.9,842.73,25,Male,Chicago,Gold
+24,114,9,2,Credit Card,3/26/2023,Electronics,132.51,2.3,265.02,52,Male,Houston,Basic
+25,169,19,3,Cash on Delivery,7/9/2023,Clothing,145.89,1.7,437.67,53,Female,Chicago,Basic
+26,29,18,4,Cash on Delivery,5/30/2023,Home Appliances,341.4,3,1365.6,29,Male,New York,Basic
+27,267,9,1,Cash on Delivery,4/27/2023,Electronics,132.51,2.3,132.51,24,Male,New York,Premium
+28,20,14,5,Credit Card,8/3/2023,Clothing,33.36,4.2,166.8,24,Male,New York,Gold
+29,236,15,2,Credit Card,6/1/2023,Electronics,389.03,2.2,778.06,44,Female,New York,Basic
+30,179,6,5,Credit Card,2/6/2023,Home Appliances,450.57,3,2252.85,19,Male,Chicago,Basic
+31,269,8,5,Cash on Delivery,12/21/2023,Electronics,211.39,2.6,1056.95,65,Female,New York,Gold
+32,76,20,1,UPI,4/11/2023,Clothing,35.9,1.5,35.9,22,Female,Chicago,Basic
+33,92,2,3,UPI,2/5/2023,Home Appliances,325.48,3.4,976.44,52,Male,Houston,Basic
+34,267,1,5,Cash on Delivery,2/14/2023,Home Appliances,215.02,2.7,1075.1,24,Male,New York,Premium
+35,19,18,4,Cash on Delivery,9/13/2023,Home Appliances,341.4,3,1365.6,43,Female,Los Angeles,Basic
+36,11,7,2,UPI,4/28/2023,Clothing,212.98,2.6,425.96,44,Male,Chicago,Gold
+37,63,7,3,Cash on Delivery,11/29/2023,Clothing,212.98,2.6,638.94,47,Male,Houston,Gold
+38,155,4,3,UPI,5/12/2023,Clothing,418.39,4.9,1255.17,21,Male,Los Angeles,Basic
+39,258,5,3,Debit Card,7/10/2023,Clothing,350.44,1.4,1051.32,42,Male,Houston,Gold
+40,252,11,5,UPI,1/16/2023,Electronics,123.63,2.1,618.15,50,Female,Houston,Gold
+41,231,10,3,UPI,8/22/2023,Electronics,193.15,3.7,579.45,43,Male,Los Angeles,Basic
+42,228,11,5,Credit Card,7/9/2023,Electronics,123.63,2.1,618.15,23,Male,New York,Basic
+43,48,1,5,Credit Card,10/15/2023,Home Appliances,215.02,2.7,1075.1,25,Female,Los Angeles,Gold
+44,255,10,2,Cash on Delivery,10/6/2023,Electronics,193.15,3.7,386.3,27,Female,New York,Gold
+45,156,12,4,Debit Card,9/6/2023,Home Appliances,466.49,2.6,1865.96,18,Female,Chicago,Basic
+46,285,7,2,Credit Card,9/2/2023,Clothing,212.98,2.6,425.96,35,Female,Chicago,Premium
+47,196,5,5,UPI,8/31/2023,Clothing,350.44,1.4,1752.2,42,,Los Angeles,Premium
+48,169,18,4,Debit Card,3/17/2023,Home Appliances,341.4,3,1365.6,53,,Chicago,Basic
+49,112,8,4,Credit Card,5/2/2023,Electronics,211.39,2.6,845.56,34,,Chicago,Basic
+50,95,15,3,UPI,12/5/2023,Electronics,389.03,2.2,1167.09,49,,New York,Premium
+51,251,7,3,Credit Card,2/27/2023,Clothing,212.98,2.6,638.94,63,,Houston,Basic
+52,107,14,2,Credit Card,12/25/2023,Clothing,33.36,4.2,66.72,27,,Chicago,Gold
+53,137,10,1,UPI,9/8/2023,Electronics,193.15,3.7,193.15,49,,Chicago,Premium
+54,156,16,5,Cash on Delivery,8/20/2023,Home Appliances,172.25,4.3,861.25,18,,Chicago,Basic
+55,271,3,3,Cash on Delivery,1/16/2023,Clothing,117.7,4.9,353.1,62,,Chicago,Basic
+56,60,11,3,UPI,9/23/2023,Electronics,123.63,2.1,370.89,43,,New York,Basic
+57,203,3,5,Debit Card,11/11/2023,Clothing,117.7,4.9,588.5,41,,Chicago,Gold
+58,221,8,5,Cash on Delivery,11/15/2023,Electronics,211.39,2.6,1056.95,41,,New York,Basic
+59,17,17,1,Credit Card,5/28/2023,Electronics,280.91,1.9,280.91,52,,Chicago,Gold
+60,41,13,1,Cash on Delivery,1/18/2023,Clothing,243.41,5,243.41,44,Female,New York,Gold
+61,25,15,5,UPI,2/7/2023,Electronics,389.03,2.2,1945.15,31,Male,Houston,Gold
+62,239,12,4,UPI,8/19/2023,Home Appliances,466.49,2.6,1865.96,43,Female,Chicago,Premium
+63,275,9,2,Debit Card,10/14/2023,Electronics,132.51,2.3,265.02,37,Female,Los Angeles,Premium
+64,52,19,1,Cash on Delivery,10/17/2023,Clothing,145.89,1.7,145.89,50,Male,Houston,Premium
+65,199,19,2,UPI,4/27/2023,Clothing,145.89,1.7,291.78,26,Female,Houston,Basic
+66,267,6,2,Cash on Delivery,3/17/2023,Home Appliances,450.57,3,901.14,24,Female,New York,Premium
+67,143,13,3,Cash on Delivery,11/29/2023,Clothing,243.41,5,730.23,36,Female,New York,Basic
+68,201,9,5,UPI,1/28/2023,Electronics,132.51,2.3,662.55,24,Male,Houston,Premium
+69,139,11,5,UPI,6/27/2023,Electronics,123.63,2.1,618.15,28,Female,New York,Gold
+70,33,14,4,Credit Card,6/5/2023,Clothing,33.36,4.2,133.44,62,Female,New York,Premium
+71,105,19,5,Debit Card,6/21/2023,Clothing,145.89,1.7,729.45,61,Female,Los Angeles,Gold
+72,279,18,2,UPI,1/7/2023,Home Appliances,341.4,3,682.8,50,Female,Los Angeles,Basic
+73,248,13,1,Cash on Delivery,8/22/2023,Clothing,243.41,5,243.41,37,Female,New York,Gold
+74,17,12,3,UPI,8/19/2023,Home Appliances,466.49,2.6,1399.47,52,Female,Chicago,Gold
+75,138,19,1,Debit Card,4/3/2023,Clothing,145.89,1.7,145.89,38,Female,Los Angeles,Basic
+76,18,12,2,UPI,3/15/2023,Home Appliances,466.49,2.6,932.98,25,Female,Houston,Premium
+77,102,20,2,Credit Card,11/24/2023,Clothing,35.9,1.5,71.8,25,Male,New York,Gold
+78,71,4,4,Credit Card,2/15/2023,Clothing,418.39,4.9,1673.56,65,Female,Los Angeles,Basic
+79,80,16,4,Cash on Delivery,2/1/2023,Home Appliances,172.25,4.3,689,49,Female,Houston,Gold
+80,131,17,1,UPI,3/26/2023,Electronics,280.91,1.9,280.91,44,Female,Houston,Gold
+81,227,12,4,Debit Card,4/5/2023,Home Appliances,466.49,2.6,1865.96,63,Female,Chicago,Premium
+82,21,2,4,Debit Card,7/5/2023,Home Appliances,325.48,3.4,1301.92,59,Male,Houston,Gold
+83,238,5,1,Credit Card,5/27/2023,Clothing,350.44,1.4,350.44,24,Male,New York,Premium
+84,162,19,3,Credit Card,8/19/2023,Clothing,145.89,1.7,437.67,41,Male,Chicago,Premium
+85,28,13,2,Credit Card,12/10/2023,Clothing,243.41,5,486.82,56,Male,Los Angeles,Basic
+86,154,7,3,Cash on Delivery,3/14/2023,Clothing,212.98,2.6,638.94,56,Female,Los Angeles,Basic
+87,129,5,3,Cash on Delivery,5/16/2023,Clothing,350.44,1.4,1051.32,49,Male,Los Angeles,Gold
+88,90,7,5,UPI,4/8/2023,Clothing,212.98,2.6,1064.9,63,Female,Chicago,Gold
+89,277,16,1,Cash on Delivery,8/6/2023,Home Appliances,172.25,4.3,172.25,46,Female,Chicago,Gold
+90,121,12,5,Credit Card,2/10/2023,Home Appliances,466.49,2.6,2332.45,60,Female,Houston,Gold
+91,163,11,5,Credit Card,2/11/2023,Electronics,123.63,2.1,618.15,28,Female,Los Angeles,Premium
+92,94,19,2,UPI,10/22/2023,Clothing,145.89,1.7,291.78,46,Female,New York,Premium
+93,12,6,1,Debit Card,10/6/2023,Home Appliances,450.57,3,450.57,22,Female,Chicago,Premium
+94,249,12,4,UPI,6/4/2023,Home Appliances,466.49,2.6,1865.96,52,Male,New York,Gold
+95,141,13,5,Debit Card,9/17/2023,Clothing,243.41,5,1217.05,61,Male,Houston,Gold
+96,33,6,2,UPI,10/17/2023,Home Appliances,450.57,3,901.14,62,Female,New York,Premium
+97,152,10,5,UPI,2/16/2023,Electronics,193.15,3.7,965.75,36,Male,Chicago,Premium
+98,9,8,5,UPI,7/11/2023,Electronics,211.39,2.6,1056.95,42,Female,Chicago,Premium
+99,159,10,1,Credit Card,11/17/2023,Electronics,193.15,3.7,193.15,47,Male,New York,Premium
+100,194,6,2,Cash on Delivery,7/18/2023,Home Appliances,450.57,3,901.14,57,Male,Chicago,Gold
+101,287,19,5,Cash on Delivery,5/25/2023,Clothing,145.89,1.7,729.45,54,Male,Chicago,Basic
+102,60,17,3,Debit Card,5/7/2023,Electronics,280.91,1.9,842.73,43,Male,New York,Basic
+103,91,2,4,UPI,8/11/2023,Home Appliances,325.48,3.4,1301.92,47,Female,Houston,Gold
+104,99,19,5,Credit Card,8/16/2023,Clothing,145.89,1.7,729.45,32,Female,Houston,Premium
+105,225,19,3,UPI,6/15/2023,Clothing,145.89,1.7,437.67,40,Female,Los Angeles,Gold
+106,202,20,1,UPI,12/6/2023,Clothing,35.9,1.5,35.9,27,Male,Los Angeles,Gold
+107,171,13,3,UPI,3/1/2023,Clothing,243.41,5,730.23,39,Male,New York,Basic
+108,147,1,2,Credit Card,1/17/2023,Home Appliances,215.02,2.7,430.04,26,Male,Los Angeles,Premium
+109,239,6,4,Cash on Delivery,7/11/2023,Home Appliances,450.57,3,1802.28,43,Female,Chicago,Premium
+110,167,5,4,UPI,12/27/2023,Clothing,350.44,1.4,1401.76,20,Female,New York,Gold
+111,96,18,5,Credit Card,8/26/2023,Home Appliances,341.4,3,1707,24,Female,Houston,Premium
+112,240,7,1,UPI,2/28/2023,Clothing,212.98,2.6,212.98,58,Male,Chicago,Gold
+113,132,17,4,Cash on Delivery,6/3/2023,Electronics,280.91,1.9,1123.64,59,Male,Houston,Basic
+114,179,15,4,UPI,3/22/2023,Electronics,389.03,2.2,1556.12,19,Male,Chicago,Basic
+115,163,5,1,Cash on Delivery,8/29/2023,Clothing,350.44,1.4,350.44,28,Female,Los Angeles,Premium
+116,290,5,4,UPI,2/1/2023,Clothing,350.44,1.4,1401.76,59,Male,Chicago,Premium
+117,77,13,3,Credit Card,8/6/2023,Clothing,243.41,5,730.23,42,Male,Los Angeles,Basic
+118,230,8,3,Credit Card,11/23/2023,Electronics,211.39,2.6,634.17,18,Male,Los Angeles,Gold
+119,213,19,5,UPI,11/21/2023,Clothing,145.89,1.7,729.45,42,Male,Chicago,Basic
+120,133,1,5,Credit Card,4/23/2023,Home Appliances,215.02,2.7,1075.1,22,Male,Houston,Premium
+121,261,4,1,Debit Card,6/6/2023,Clothing,418.39,4.9,418.39,38,Male,New York,Basic
+122,71,18,4,UPI,12/10/2023,Home Appliances,341.4,3,1365.6,65,Male,Los Angeles,Basic
+123,145,4,1,Credit Card,10/4/2023,Clothing,418.39,4.9,418.39,56,Male,New York,Premium
+124,256,8,3,Credit Card,2/17/2023,Electronics,211.39,2.6,634.17,50,Male,Los Angeles,Premium
+125,98,4,4,Cash on Delivery,12/7/2023,Clothing,418.39,4.9,1673.56,40,Male,Chicago,Basic
+126,17,18,2,Credit Card,8/29/2023,Home Appliances,341.4,3,682.8,52,Female,Chicago,Gold
+127,189,14,1,Cash on Delivery,7/5/2023,Clothing,33.36,4.2,33.36,31,Male,Los Angeles,Gold
+128,267,12,2,UPI,8/3/2023,Home Appliances,466.49,2.6,932.98,24,Male,New York,Premium
+129,270,11,5,UPI,1/11/2023,Electronics,123.63,2.1,618.15,34,Female,Los Angeles,Basic
+130,161,11,3,UPI,3/28/2023,Electronics,123.63,2.1,370.89,33,Female,New York,Basic
+131,162,17,1,Cash on Delivery,5/30/2023,Electronics,280.91,1.9,280.91,41,Male,Chicago,Premium
+132,138,2,4,Cash on Delivery,4/2/2023,Home Appliances,325.48,3.4,1301.92,38,Male,Los Angeles,Basic
+133,226,10,5,Debit Card,9/30/2023,Electronics,193.15,3.7,965.75,31,Female,Los Angeles,Premium
+134,38,4,4,Cash on Delivery,12/1/2023,Clothing,418.39,4.9,1673.56,40,Female,Chicago,Premium
+135,205,6,4,Credit Card,2/3/2023,Home Appliances,450.57,3,1802.28,43,Male,Chicago,Premium
+136,268,10,2,Debit Card,4/7/2023,Electronics,193.15,3.7,386.3,58,Male,Chicago,Gold
+137,291,19,1,Cash on Delivery,11/25/2023,Clothing,145.89,1.7,145.89,23,Male,Los Angeles,Gold
+138,104,6,3,Debit Card,10/18/2023,Home Appliances,450.57,3,1351.71,59,Male,Houston,Gold
+139,187,9,3,UPI,1/4/2023,Electronics,132.51,2.3,397.53,53,Male,Houston,Premium
+140,33,16,5,UPI,9/3/2023,Home Appliances,172.25,4.3,861.25,62,Male,New York,Premium
+141,238,13,3,Debit Card,4/28/2023,Clothing,243.41,5,730.23,24,Male,New York,Premium
+142,118,9,5,UPI,2/10/2023,Electronics,132.51,2.3,662.55,32,Male,Los Angeles,Basic
+143,267,7,2,Credit Card,11/27/2023,Clothing,212.98,2.6,425.96,24,Male,New York,Premium
+144,81,19,1,Cash on Delivery,10/24/2023,Clothing,145.89,1.7,145.89,63,Female,Chicago,Gold
+145,260,10,2,Cash on Delivery,9/29/2023,Electronics,193.15,3.7,386.3,42,Male,Houston,Gold
+146,76,18,5,UPI,4/18/2023,Home Appliances,341.4,3,1707,22,Female,Chicago,Basic
+147,184,8,4,Credit Card,1/13/2023,Electronics,211.39,2.6,845.56,25,Male,Los Angeles,Gold
+148,14,16,2,Cash on Delivery,12/8/2023,Home Appliances,172.25,4.3,344.5,45,Male,Los Angeles,Premium
+149,51,15,4,Debit Card,9/4/2023,Electronics,389.03,2.2,1556.12,35,Female,Los Angeles,Premium
+150,155,18,3,Cash on Delivery,9/17/2023,Home Appliances,341.4,3,1024.2,21,Male,Los Angeles,Basic
+151,75,17,4,Cash on Delivery,7/19/2023,Electronics,280.91,1.9,1123.64,30,Male,Chicago,Basic
+152,236,16,3,Credit Card,2/6/2023,Home Appliances,172.25,4.3,516.75,44,Female,New York,Basic
+153,275,5,1,Debit Card,10/1/2023,Clothing,350.44,1.4,350.44,37,Female,Los Angeles,Premium
+154,277,3,3,UPI,3/19/2023,Clothing,117.7,4.9,353.1,46,Female,Chicago,Gold
+155,49,6,5,Credit Card,4/12/2023,Home Appliances,450.57,3,2252.85,29,Female,Chicago,Premium
+156,262,19,5,Credit Card,9/6/2023,Clothing,145.89,1.7,729.45,62,Female,Chicago,Basic
+157,241,11,2,Credit Card,5/30/2023,Electronics,123.63,2.1,247.26,37,Male,Chicago,Premium
+158,216,11,5,Credit Card,12/15/2023,Electronics,123.63,2.1,618.15,42,Male,Chicago,Premium
+159,254,12,1,UPI,9/12/2023,Home Appliances,466.49,2.6,466.49,21,Male,Los Angeles,Basic
+160,144,1,4,Credit Card,4/30/2023,Home Appliances,215.02,2.7,860.08,42,Male,Los Angeles,Gold
+161,229,8,1,Debit Card,7/30/2023,Electronics,211.39,2.6,211.39,44,Male,New York,Premium
+162,127,7,3,Credit Card,10/21/2023,Clothing,212.98,2.6,638.94,55,Female,Houston,Gold
+163,190,15,2,UPI,6/17/2023,Electronics,389.03,2.2,778.06,33,Male,New York,Premium
+164,69,5,3,UPI,5/15/2023,Clothing,350.44,1.4,1051.32,56,Male,Houston,Basic
+165,120,3,2,UPI,12/17/2023,Clothing,117.7,4.9,235.4,40,Male,Chicago,Basic
+166,30,7,1,UPI,8/24/2023,Clothing,212.98,2.6,212.98,32,Female,Los Angeles,Basic
+167,116,13,3,Credit Card,2/5/2023,Clothing,243.41,5,730.23,63,Male,New York,Premium
+168,68,20,5,Cash on Delivery,9/25/2023,Clothing,35.9,1.5,179.5,39,Male,Houston,Gold
+169,68,9,5,Debit Card,4/23/2023,Electronics,132.51,2.3,662.55,39,Male,Houston,Gold
+170,96,12,3,Credit Card,5/18/2023,Home Appliances,466.49,2.6,1399.47,24,Female,Houston,Premium
+171,92,14,5,Debit Card,8/20/2023,Clothing,33.36,4.2,166.8,52,Male,Houston,Basic
+172,180,7,1,Debit Card,7/7/2023,Clothing,212.98,2.6,212.98,60,Male,Houston,Premium
+173,70,9,1,Cash on Delivery,5/18/2023,Electronics,132.51,2.3,132.51,48,Female,Los Angeles,Gold
+174,298,4,1,UPI,11/26/2023,Clothing,418.39,4.9,418.39,53,Female,Houston,Basic
+175,276,19,1,Debit Card,4/3/2023,Clothing,145.89,1.7,145.89,35,Female,Houston,Gold
+176,251,9,5,Credit Card,11/27/2023,Electronics,132.51,2.3,662.55,63,Male,Houston,Basic
+177,75,2,5,UPI,8/30/2023,Home Appliances,325.48,3.4,1627.4,30,Male,Chicago,Basic
+178,296,17,5,Credit Card,11/13/2023,Electronics,280.91,1.9,1404.55,33,Male,Los Angeles,Basic
+179,229,12,4,UPI,5/5/2023,Home Appliances,466.49,2.6,1865.96,44,Male,New York,Premium
+180,224,14,4,Cash on Delivery,2/23/2023,Clothing,33.36,4.2,133.44,54,Female,Los Angeles,Basic
+181,58,10,4,Credit Card,7/13/2023,Electronics,193.15,3.7,772.6,58,Male,New York,Basic
+182,83,7,5,Debit Card,6/10/2023,Clothing,212.98,2.6,1064.9,40,Male,Chicago,Basic
+183,299,16,1,UPI,10/4/2023,Home Appliances,172.25,4.3,172.25,44,Female,Los Angeles,Basic
+184,257,2,2,Cash on Delivery,5/27/2023,Home Appliances,325.48,3.4,650.96,22,Male,Los Angeles,Premium
+185,162,10,3,Debit Card,2/14/2023,Electronics,193.15,3.7,579.45,41,Male,Chicago,Premium
+186,76,19,3,UPI,5/14/2023,Clothing,145.89,1.7,437.67,22,Female,Chicago,Basic
+187,67,2,5,Cash on Delivery,7/14/2023,Home Appliances,325.48,3.4,1627.4,39,Male,Houston,Gold
+188,20,8,4,Cash on Delivery,3/31/2023,Electronics,211.39,2.6,845.56,24,Male,New York,Gold
+189,256,1,5,Debit Card,6/13/2023,Home Appliances,215.02,2.7,1075.1,50,Female,Los Angeles,Premium
+190,90,1,2,Cash on Delivery,3/15/2023,Home Appliances,215.02,2.7,430.04,63,Female,Chicago,Gold
+191,132,15,4,Debit Card,11/19/2023,Electronics,389.03,2.2,1556.12,59,Male,Houston,Basic
+192,4,18,1,Debit Card,9/17/2023,Home Appliances,341.4,3,341.4,20,Female,Chicago,Premium
+193,218,3,2,UPI,10/21/2023,Clothing,117.7,4.9,235.4,43,Female,Houston,Gold
+194,217,16,4,Cash on Delivery,3/20/2023,Home Appliances,172.25,4.3,689,40,Female,Chicago,Gold
+195,253,4,1,Cash on Delivery,9/3/2023,Clothing,418.39,4.9,418.39,19,Female,Chicago,Premium
+196,81,7,1,Debit Card,9/1/2023,Clothing,212.98,2.6,212.98,63,Female,Chicago,Gold
+197,213,2,5,Debit Card,1/13/2023,Home Appliances,325.48,3.4,1627.4,42,Female,Chicago,Basic
+198,36,14,1,Cash on Delivery,11/15/2023,Clothing,33.36,4.2,33.36,58,Female,Los Angeles,Gold
+199,145,4,1,UPI,4/5/2023,Clothing,418.39,4.9,418.39,56,Female,New York,Premium
+200,249,17,2,Cash on Delivery,11/22/2023,Electronics,280.91,1.9,561.82,52,Male,New York,Gold
+201,59,19,5,UPI,11/18/2023,Clothing,145.89,1.7,729.45,64,Female,Chicago,Gold
+202,69,8,5,UPI,6/7/2023,Electronics,211.39,2.6,1056.95,56,Female,Houston,Basic
+203,221,19,3,Cash on Delivery,5/20/2023,Clothing,145.89,1.7,437.67,41,Female,New York,Basic
+204,137,7,3,Debit Card,12/12/2023,Clothing,212.98,2.6,638.94,49,Male,Chicago,Premium
+205,287,12,4,UPI,9/7/2023,Home Appliances,466.49,2.6,1865.96,54,Male,Chicago,Basic
+206,198,2,1,Credit Card,10/24/2023,Home Appliances,325.48,3.4,325.48,35,Female,Houston,Basic
+207,297,18,5,Debit Card,5/8/2023,Home Appliances,341.4,3,1707,52,Male,Chicago,Premium
+208,35,16,2,Debit Card,8/21/2023,Home Appliances,172.25,4.3,344.5,26,Female,Houston,Gold
+209,73,17,5,Debit Card,7/6/2023,Electronics,280.91,1.9,1404.55,51,Female,Houston,Premium
+210,251,11,4,Cash on Delivery,10/27/2023,Electronics,123.63,2.1,494.52,63,Female,Houston,Basic
+211,82,2,1,UPI,4/12/2023,Home Appliances,325.48,3.4,325.48,42,Female,New York,Basic
+212,175,14,5,Credit Card,7/7/2023,Clothing,33.36,4.2,166.8,25,Female,Chicago,Gold
+213,93,17,5,Cash on Delivery,6/20/2023,Electronics,280.91,1.9,1404.55,31,Male,New York,Premium
+214,234,13,2,Credit Card,4/25/2023,Clothing,243.41,5,486.82,46,Female,Los Angeles,Basic
+215,272,9,5,Cash on Delivery,4/20/2023,Electronics,132.51,2.3,662.55,45,Female,Houston,Basic
+216,143,15,3,UPI,7/3/2023,Electronics,389.03,2.2,1167.09,36,Female,New York,Basic
+217,150,3,3,Credit Card,11/28/2023,Clothing,117.7,4.9,353.1,65,Female,Chicago,Premium
+218,136,6,5,Debit Card,11/17/2023,Home Appliances,450.57,3,2252.85,41,Male,Chicago,Premium
+219,214,10,1,Credit Card,6/27/2023,Electronics,193.15,3.7,193.15,43,Female,Los Angeles,Gold
+220,198,12,5,Cash on Delivery,2/8/2023,Home Appliances,466.49,2.6,2332.45,35,Female,Houston,Basic
+221,261,15,1,Credit Card,6/5/2023,Electronics,389.03,2.2,389.03,38,Male,New York,Basic
+222,9,9,5,UPI,11/21/2023,Electronics,132.51,2.3,662.55,42,Female,Chicago,Premium
+223,287,15,5,Credit Card,7/1/2023,Electronics,389.03,2.2,1945.15,54,Male,Chicago,Basic
+224,67,4,2,Credit Card,1/21/2023,Clothing,418.39,4.9,836.78,39,Male,Houston,Gold
+225,32,9,4,Debit Card,7/16/2023,Electronics,132.51,2.3,530.04,59,Male,Los Angeles,Basic
+226,23,5,4,Cash on Delivery,1/12/2023,Clothing,350.44,1.4,1401.76,36,Female,New York,Gold
+227,82,14,3,Debit Card,2/5/2023,Clothing,33.36,4.2,100.08,42,Female,New York,Basic
+228,115,17,1,UPI,12/15/2023,Electronics,280.91,1.9,280.91,57,Female,Houston,Basic
+229,281,2,5,UPI,8/20/2023,Home Appliances,325.48,3.4,1627.4,19,Male,New York,Gold
+230,294,19,2,Cash on Delivery,5/9/2023,Clothing,145.89,1.7,291.78,55,Male,Chicago,Gold
+231,30,5,1,UPI,6/3/2023,Clothing,350.44,1.4,350.44,32,Female,Los Angeles,Basic
+232,166,11,4,Cash on Delivery,11/4/2023,Electronics,123.63,2.1,494.52,57,Female,New York,Premium
+233,132,1,1,UPI,3/20/2023,Home Appliances,215.02,2.7,215.02,59,Male,Houston,Basic
+234,209,7,5,UPI,12/14/2023,Clothing,212.98,2.6,1064.9,27,Female,Chicago,Premium
+235,70,15,2,Debit Card,6/25/2023,Electronics,389.03,2.2,778.06,48,Female,Los Angeles,Gold
+236,154,5,5,Credit Card,9/27/2023,Clothing,350.44,1.4,1752.2,56,Male,Los Angeles,Basic
+237,39,11,1,Cash on Delivery,3/2/2023,Electronics,123.63,2.1,123.63,44,Male,New York,Premium
+238,126,16,5,Cash on Delivery,1/8/2023,Home Appliances,172.25,4.3,861.25,43,Male,Houston,Basic
+239,231,10,5,Cash on Delivery,12/13/2023,Electronics,193.15,3.7,965.75,43,Male,Los Angeles,Basic
+240,149,2,1,Cash on Delivery,10/1/2023,Home Appliances,325.48,3.4,325.48,51,Male,Chicago,Gold
+241,115,6,4,Debit Card,9/5/2023,Home Appliances,450.57,3,1802.28,57,Female,Houston,Basic
+242,17,12,4,Cash on Delivery,1/15/2023,Home Appliances,466.49,2.6,1865.96,52,Female,Chicago,Gold
+243,135,19,2,UPI,11/7/2023,Clothing,145.89,1.7,291.78,33,Female,Houston,Premium
+244,195,12,5,UPI,8/1/2023,Home Appliances,466.49,2.6,2332.45,27,Female,Chicago,Gold
+245,216,3,2,Debit Card,1/25/2023,Clothing,117.7,4.9,235.4,42,Male,Chicago,Premium
+246,207,8,4,Cash on Delivery,7/5/2023,Electronics,211.39,2.6,845.56,50,Male,Houston,Basic
+247,280,13,2,Debit Card,7/22/2023,Clothing,243.41,5,486.82,19,Male,Houston,Basic
+248,87,16,1,Debit Card,1/1/2023,Home Appliances,172.25,4.3,172.25,47,Male,Houston,Gold
+249,46,2,1,Debit Card,2/23/2023,Home Appliances,325.48,3.4,325.48,46,Female,Chicago,Premium
+250,27,13,3,Debit Card,7/24/2023,Clothing,243.41,5,730.23,60,Male,New York,Basic
+251,49,13,2,UPI,2/9/2023,Clothing,243.41,5,486.82,29,Female,Chicago,Premium
+252,136,6,4,UPI,11/24/2023,Home Appliances,450.57,3,1802.28,41,Male,Chicago,Premium
+253,225,19,2,Debit Card,10/1/2023,Clothing,145.89,1.7,291.78,40,Female,Los Angeles,Gold
+254,98,11,1,UPI,8/4/2023,Electronics,123.63,2.1,123.63,40,Male,Chicago,Basic
+255,77,12,5,Credit Card,6/22/2023,Home Appliances,466.49,2.6,2332.45,42,Male,Los Angeles,Basic
+256,211,11,3,Cash on Delivery,12/1/2023,Electronics,123.63,2.1,370.89,60,Female,Houston,Gold
+257,95,1,3,Credit Card,12/26/2023,Home Appliances,215.02,2.7,645.06,49,Male,New York,Premium
+258,20,8,2,Cash on Delivery,3/31/2023,Electronics,211.39,2.6,422.78,24,Male,New York,Gold
+259,157,1,5,UPI,3/21/2023,Home Appliances,215.02,2.7,1075.1,57,Male,Chicago,Gold
+260,184,8,5,Debit Card,1/24/2023,Electronics,211.39,2.6,1056.95,25,Male,Los Angeles,Gold
+261,246,12,4,Credit Card,4/22/2023,Home Appliances,466.49,2.6,1865.96,34,Male,Houston,Gold
+262,137,8,1,Cash on Delivery,6/21/2023,Electronics,211.39,2.6,211.39,49,Male,Chicago,Premium
+263,208,16,3,UPI,12/18/2023,Home Appliances,172.25,4.3,516.75,46,Female,Los Angeles,Gold
+264,213,10,2,Debit Card,12/2/2023,Electronics,193.15,3.7,386.3,42,Male,Chicago,Basic
+265,225,15,3,Cash on Delivery,6/20/2023,Electronics,389.03,2.2,1167.09,40,Female,Los Angeles,Gold
+266,255,10,1,UPI,7/16/2023,Electronics,193.15,3.7,193.15,27,Male,New York,Gold
+267,49,8,3,Credit Card,5/12/2023,Electronics,211.39,2.6,634.17,29,Female,Chicago,Premium
+268,42,8,5,Debit Card,6/3/2023,Electronics,211.39,2.6,1056.95,49,Male,Houston,Gold
+269,139,2,2,Debit Card,7/4/2023,Home Appliances,325.48,3.4,650.96,28,Male,New York,Gold
+270,65,14,3,UPI,3/19/2023,Clothing,33.36,4.2,100.08,60,Female,New York,Premium
+271,203,18,1,Debit Card,6/7/2023,Home Appliances,341.4,3,341.4,41,Male,Chicago,Gold
+272,113,11,4,Cash on Delivery,2/25/2023,Electronics,123.63,2.1,494.52,63,Male,New York,Gold
+273,242,2,3,UPI,4/5/2023,Home Appliances,325.48,3.4,976.44,23,Female,Chicago,Premium
+274,223,19,2,UPI,6/29/2023,Clothing,145.89,1.7,291.78,58,Female,Chicago,Basic
+275,14,16,3,UPI,11/26/2023,Home Appliances,172.25,4.3,516.75,45,Male,Los Angeles,Premium
+276,232,2,5,Debit Card,3/24/2023,Home Appliances,325.48,3.4,1627.4,59,Male,Houston,Basic
+277,37,9,3,Cash on Delivery,4/6/2023,Electronics,132.51,2.3,397.53,27,Male,Houston,Basic
+278,93,5,5,UPI,5/13/2023,Clothing,350.44,1.4,1752.2,31,Male,New York,Premium
+279,138,6,4,Debit Card,5/9/2023,Home Appliances,450.57,3,1802.28,38,Male,Los Angeles,Basic
+280,49,18,3,Cash on Delivery,3/17/2023,Home Appliances,341.4,3,1024.2,29,Female,Chicago,Premium
+281,52,17,4,UPI,5/26/2023,Electronics,280.91,1.9,1123.64,50,Male,Houston,Premium
+282,150,12,4,UPI,5/14/2023,Home Appliances,466.49,2.6,1865.96,65,Male,Chicago,Premium
+283,172,15,5,Cash on Delivery,11/16/2023,Electronics,389.03,2.2,1945.15,59,Male,Los Angeles,Gold
+284,255,2,5,Credit Card,7/26/2023,Home Appliances,325.48,3.4,1627.4,27,Male,New York,Gold
+285,267,14,2,Cash on Delivery,12/17/2023,Clothing,33.36,4.2,66.72,24,Male,New York,Premium
+286,274,2,4,Credit Card,6/27/2023,Home Appliances,325.48,3.4,1301.92,24,Male,New York,Premium
+287,127,16,1,Cash on Delivery,6/19/2023,Home Appliances,172.25,4.3,172.25,55,Female,Houston,Gold
+288,140,15,2,Debit Card,12/16/2023,Electronics,389.03,2.2,778.06,53,Male,Houston,Premium
+289,199,10,2,Debit Card,1/29/2023,Electronics,193.15,3.7,386.3,26,Male,Houston,Basic
+290,174,3,3,UPI,1/6/2023,Clothing,117.7,4.9,353.1,28,Male,New York,Premium
+291,191,2,4,Cash on Delivery,8/20/2023,Home Appliances,325.48,3.4,1301.92,40,Male,Los Angeles,Gold
+292,30,11,2,Cash on Delivery,11/11/2023,Electronics,123.63,2.1,247.26,32,Female,Los Angeles,Basic
+293,198,8,3,Debit Card,10/8/2023,Electronics,211.39,2.6,634.17,35,Female,Houston,Basic
+294,292,16,2,Cash on Delivery,4/15/2023,Home Appliances,172.25,4.3,344.5,59,Female,Chicago,Premium
+295,181,9,5,Cash on Delivery,9/28/2023,Electronics,132.51,2.3,662.55,30,Male,Los Angeles,Premium
+296,157,15,5,Cash on Delivery,3/13/2023,Electronics,389.03,2.2,1945.15,57,Male,Chicago,Gold
+297,293,13,5,Debit Card,10/5/2023,Clothing,243.41,5,1217.05,59,Male,Los Angeles,Basic
+298,189,18,4,Debit Card,8/2/2023,Home Appliances,341.4,3,1365.6,31,Male,Los Angeles,Gold
+299,182,15,2,Debit Card,11/12/2023,Electronics,389.03,2.2,778.06,63,Female,Houston,Basic
+300,183,12,3,Debit Card,2/19/2023,Home Appliances,466.49,2.6,1399.47,23,Female,Chicago,Basic

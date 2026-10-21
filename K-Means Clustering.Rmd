@@ -1,0 +1,127 @@
+---
+title: "K-Means Clustering"
+author: "CANON TUMWET"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+# Set working directory
+# Tells R where to look for your files on your computer. It sets the active directory to your specified folder path so R can easily locate your Excel dataset.
+```{r}
+setwd("D:/CANON/Intermediate R")
+```
+
+
+# Load libraries
+# Loads specialized packages required for the workflow: 
+# cluster provides core clustering functions, factoextra helps visualize cluster outputs and optimal cluster metrics, and readxl allows R to read Excel spreadsheets directly.
+```{r}
+library(cluster)
+library(dplyr)
+library(factoextra)
+library(readxl)
+```
+
+
+# Load the dataset 
+```{r}
+df <- read_excel("mall_customers.xlsx")
+head(df)
+```
+
+
+# The structure of the dataset
+```{r}
+str(df)
+```
+
+
+# Select the numeric features for clustering (exclude Customer_ID)
+```{r}
+features <- df[, c("Age", "Annual_Income", "Spending_Score", 
+                   "Years_As_Member", "Average_Purchase_Value")]
+```
+
+
+
+# Scale the data (mean = 0, standard deviation = 1)
+# Standardizes the data so that every feature has a mean of 0 and a standard deviation of 1. 
+# This step is vital because features with larger numerical ranges (like Annual Income or Average Purchase Value) would otherwise overpower smaller-scale features (like Years As Member).
+```{r}
+scaled_features <- scale(features)
+```
+
+
+# Determine the optimal number of clusters using the Elbow Method
+# Calculates the Within-Cluster Sum of Squares (wss) for various values of k. When plotted, it helps you identify the "elbow point"—the optimal number of clusters where adding more clusters yields diminishing returns.
+```{r}
+fviz_nbclust(scaled_features, kmeans, method = "wss") +
+  labs(title = "Elbow Method for Optimal k (Multi-Feature Data)")
+```
+
+
+# Apply K-Means clustering (setting k = 3 based on typical cluster patterns)
+# Runs the core machine learning algorithm. set.seed(42) ensures random initial centroid placements are reproducible so you get the exact same results every time you run it. centers = 3 tells the model to partition data into 3 groups, and nstart = 25 runs the algorithm 25 times with different starting configurations, picking the best local optimum.
+```{r}
+set.seed(42) # Ensures reproducibility
+k_optimal <- 3
+kmeans_result <- kmeans(scaled_features, centers = k_optimal, nstart = 25)
+```
+
+
+# View the cluster sizes and centers
+```{r}
+print(kmeans_result)
+```
+
+
+# Append the cluster assignments back to the original dataframe
+```{r}
+df$Cluster <- as.factor(kmeans_result$cluster)
+head(df)
+```
+
+
+# Visualize the clusters using Principal Component Analysis (PCA) reduction
+# Since we have 5 dimensions, PCA reduces them to 2D for plotting purposes
+```{r}
+fviz_cluster(kmeans_result, data = scaled_features,
+             palette = c("#2E9FDF", "#00AFBB", "#E7B800"),
+             geom = "point",
+             ellipse.type = "convex",
+             ggtheme = theme_minimal(),
+             main = "Customer Clusters (5-Feature Model Visualized via PCA)"
+)
+
+```
+
+
+# Because your data has 5 dimensions, it cannot be drawn directly on a standard 2D scatter plot. This function uses Principal Component Analysis (PCA) behind the scenes to compress the 5 features down into 2 principal components, plotting your customer groups with colored convex hulls and cluster points.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

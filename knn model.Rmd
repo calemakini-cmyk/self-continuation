@@ -1,0 +1,342 @@
+---
+title: "KNN model"
+author: "MAKINI CALEB"
+date: "`r Sys.Date()`"
+output: html_document
+---
+             
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo        = TRUE,          # show the code in HTML
+  tidy        = TRUE,          # run formatR on the code
+  tidy.opts   = list(
+    comment     = FALSE,       # <-- STRIP "#" comments from displayed code
+    blank       = FALSE,       # drop blank lines
+    widthCutoff = 120          # keep long lines readable
+  ),
+  comment     = NA,            # hide the "##" prefix on output
+  warning     = FALSE,
+  message     = FALSE,
+  eval        = TRUE,
+  fig.align   = "center",
+  fig.width   = 10,
+  fig.height  = 6,
+  dpi         = 120,
+  dev         = "png",
+  fig.show    = "asis",
+  fig.keep    = "all",
+  out.width   = "100%"
+)
+                      
+```
+
+# SETTING A WORKING DIRECTORY
+```{r}
+ setwd("C:/Users/ADMIN/OneDrive/Desktop/caleb makini")
+
+```
+
+
+# load libraries
+```{r}
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(ggthemes)
+library(psych)
+library(sjmisc)
+library(kableExtra)
+library(knitr)
+library(rio)
+library(tidyr)
+library(reshape2)
+library(formatR)
+library(readxl)
+library(corrplot)
+library(caret)
+library(randomForest)
+library(pROC)
+#library(vip)/ can replaced by library(caret)
+library(class)
+library(FNN)
+library(Metrics)
+
+```
+
+
+## load data
+```{r}
+data<-read_excel("sample_knn_dataset.xlsx")
+head(data)
+cat("No of rows",nrow(data),"\n")
+cat("No of columns",ncol(data))
+```
+ 
+ 
+ 
+## introduction to k nearest neighbour (knn)
+- knn is a simple and popular supervised machine learning algorithm used for
+** classification** problems
+** regression ** problems
+- it works by finding the nearest data points to a new observation and making prediction based on those neighbours
+
+
+## check data structure
+```{r}
+str(data)
+```
+
+## check for missing values
+```{r}
+colSums(is.na(data))
+```
+## view summary
+```{r}
+describe(data)
+summary(data)
+```
+
+## convert target variables intyo factor 
+```{r}
+data$Loan_Approved<-factor(data$Loan_Approved)
+summary(data)
+```
+
+## check levels for target variable
+```{r}
+levels(data$Loan_Approved)
+```
+
+## split data into training and test
+```{r}
+set.seed(123)
+splitted_index<-createDataPartition(data$Loan_Approved, p=.8, list=FALSE)
+train<-data[splitted_index, ]
+test<-data[-splitted_index, ]
+# check dimensions 
+dim(train)
+dim(test)
+```
+
+## normalize numerical variables
+```{r}
+normalize<-function(x){
+  return((x-min(x))/ (max(x)-min(x)))
+}
+```
+
+## select predictor- normalize-target variables
+```{r}
+train_x<-train[, 1:4]
+test_x<-test[, 1:4]
+# normalize predictors
+train_x<-as.data.frame(lapply(train_x, normalize))
+test_x<-as.data.frame(lapply(test_x, normalize))
+ # target variables
+train_y<-train$Loan_Approved
+test_y<-test$Loan_Approved
+# view normalized data
+head(train_x)
+```
+
+
+
+## build knn model
+### k= number of neighbours
+### commonm values: 3, 5, 7,9
+```{r}
+knn_model<-knn(
+  train=train_x,
+  test=test_x,
+  cl=train_y,
+  k=5
+)
+
+```
+
+## predictions
+```{r}
+predictions<-knn_model
+head(predictions)
+```
+ 
+# check test_y head
+```{r}
+head(test_y)
+```
+
+
+
+## confusion matrix
+```{r}
+confusionMatrix(predictions, test_y)
+```
+
+
+
+# test difference k values
+```{r}
+k_value<-c(3:20)
+for(k in k_value){
+  model<-knn(
+    train=train_x,
+    test=test_x,
+    cl= train_y,
+    k=k
+  )
+  acc<-sum(model==test_y)/length(test_y)
+  print(paste(
+    "k=",k,
+    "accuracy=",
+    round(acc*100, 2),"%" ))
+}
+```
+
+
+# predict new observationj
+```{r}
+New_customer<- data.frame(
+  Age= 35,
+  Income= 85000,
+  Loan_Amount= 20000,
+  Credit_Score=700
+)
+head(New_customer)
+```
+
+
+## prediction
+```{r}
+knn_model<-knn(
+  train=train_x,
+  test=New_customer,
+  cl=train_y,
+  k=15
+)
+predictions<-knn_model
+predictions
+```
+
+
+
+
+
+
+
+
+# KNN regression
+## import excel dataset
+```{r}
+head(data)
+```
+
+ # predict loan amount
+ spit data into test and train
+```{r}
+ set.seed(123)
+split_loan<-createDataPartition(data$Loan_Amount, p=.9, list=FALSE)
+train<-data[split_loan, ]
+test<-data[-split_loan, ]
+```
+## feature selection
+```{r}
+train_x= train[, c("Age", "Income", "Credit_Score")]
+test_x= test[, c("Age", "Income", "Credit_Score")]
+```
+
+
+# target variables
+```{r}
+train_y<-train$Loan_Amount
+test_y=test$Loan_Amount
+```
+
+# data scaling/normalization
+```{r}
+preProcess_model<-preProcess(
+  train_x,
+  method=c("center", "scale")
+)
+```
+ 
+# apply scaling
+```{r}
+train_x_scaled<-predict(preProcess_model, train_x)
+test_x_scaled<-predict(preProcess_model, test_x)
+```
+
+# view scaled data
+```{r}
+head(train_x_scaled)
+```
+
+
+## Build knn regression model
+```{r}
+knn_reg_model<-knn.reg(
+  train=train_x_scaled,
+  test=test_x_scaled,
+  y= train_y,
+  k=15
+)
+```
+
+# model predictions
+```{r}
+prediction<- knn_reg_model
+prediction
+
+```
+```{r}
+head(test_y)
+```
+ 
+# model evaluation
+```{r}
+rmse_val= rmse(test_y, prediction)
+mae_val=mae(test_y, prediction)
+mse_val=mse(test_y, prediction)
+r_sqr=cor(test_y, prediction)
+
+# print parametrics
+
+cat("RMSE:",round(rmse_val, 2))
+cat("MSE:",round(mse_val, 2))
+cat("maE:",round(mae_val, 2))
+cat("r sqred:",round(r_sqr, 2))
+```
+ 
+# actual vs predicted
+```{r}
+ result1<-data.frame(
+   Actual= Test_y,
+   predicted=prediction
+ )
+head(result1)
+```
+ # new data application
+```{r}
+new_data=data.frame(
+  Age=35,
+  Income= 35000,
+  credit_Score= 700
+)
+```
+# apply sam scaling
+```{r}
+new_data_scale<- predict(
+preProcess_model,
+new_data
+)
+```
+# predict loan amount
+```{r}
+new_prediction<- knn.reg(
+train=train_x_scaled,
+test=new_data_scale,
+y=train_y,
+k=15
+)
+# display prediction
+print(paste("predicted loan Amount:", round(new_prediction$pred, 2)))
+```

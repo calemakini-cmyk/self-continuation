@@ -1,0 +1,365 @@
+---
+title: 'Advanced data visualization/: session 3'
+author: "MAKINI CALEB"
+date: "`r Sys.Date()`"
+- \renewcommand{\familydefault}{cmss}- \usepackage[cm, slantedGreek]{sfmath}- \usepackage[T1]{fontenc}
+output: pdf_documen
+
+---
+             
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo        = TRUE,          # show the code in HTML
+  tidy        = TRUE,          # run formatR on the code
+  tidy.opts   = list(
+    comment     = FALSE,       # <-- STRIP "#" comments from displayed code
+    blank       = FALSE,       # drop blank lines
+    widthCutoff = 120          # keep long lines readable
+  ),
+  comment     = NA,            # hide the "##" prefix on output
+  warning     = FALSE,
+  message     = FALSE,
+  eval        = TRUE,
+  fig.align   = "center",
+  fig.width   = 10,
+  fig.height  = 6,
+  dpi         = 120,
+  dev         = "png",
+  fig.show    = "asis",
+  fig.keep    = "all",
+  out.width   = "100%"
+)
+                      
+```
+
+             
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo        = TRUE,          # show the code in HTML
+  tidy        = TRUE,          # run formatR on the code
+  tidy.opts   = list(
+    comment     = FALSE,       # <-- STRIP "#" comments from displayed code
+    blank       = FALSE,       # drop blank lines
+    widthCutoff = 120          # keep long lines readable
+  ),
+  comment     = NA,            # hide the "##" prefix on output
+  warning     = FALSE,
+  message     = FALSE,
+  eval        = TRUE,
+  fig.align   = "center",
+  fig.width   = 10,
+  fig.height  = 6,
+  dpi         = 120,
+  dev         = "png",
+  fig.show    = "asis",
+  fig.keep    = "all",
+  out.width   = "100%"
+)
+                      
+```
+
+
+
+
+# setting the working directory
+```{r}
+setwd("C:/Users/ADMIN/OneDrive/Desktop/caleb makini")
+```
+
+
+
+
+
+
+# importing libraries
+```{r}
+library(ggplot2)
+library(corrplot)
+library(plotly)
+library(ggiraph)
+library(leaflet)
+library(sf)
+library(ggmap)
+library(ggrepel)
+library(ggridges)
+library(patchwork)
+library(dplyr)
+library(GGally)
+```
+
+
+# load data
+```{r}
+data<-read.csv("GSSsubset.csv")
+head(data)
+```
+
+
+# ggplot with custom themes and colour  scales
+
+
+```{r}
+p<-ggplot(mtcars, aes(
+  x=wt, y=mpg, color=factor(cyl)
+))+
+  geom_point(size=3)+
+  
+  scale_color_brewer(palette="Set1")+
+  
+  theme_bw(base_size=10)+
+  labs(title="MPG Vs Weight by clinder",
+       x="weight",
+   
+           y="cylinders")
+
+p
+```
+
+
+
+
+# faceting  and multi-panel plot
+```{r}
+ggplot(mtcars, aes(x=wt, y= mpg))+
+  geom_point()+
+  facet_wrap(~cyl)+
+  theme_bw()+
+  labs(title=" Faceted plot by cylinder count")
+
+```
+
+
+ 
+# facet grid by cylinder and gears
+```{r}
+ggplot(mtcars, aes(x=wt, y= mpg))+
+  geom_point()+
+  facet_grid(gear~cyl)+
+  theme_bw()+
+  labs(title=" Faceted plot by cylinder count and gear")
+
+```
+
+
+
+
+
+# scatter plot + regression line
+```{r}
+ggplot(data, aes(x=age, y=income))+
+  geom_point(size=3)+
+  geom_smooth(method="lm", se=TRUE)+
+
+  labs(title=" relationship between age and income",
+       x="age",
+       y="income"
+       )+
+  theme_minimal()
+```
+
+
+
+## interactive scatter plot
+```{r}
+p<-ggplot(
+  data, aes(
+    x=age,
+    y=income,
+    text=paste(
+      "sex:", sex,
+      "<br>degree:", degree,
+      "<br>income:", income,
+      "<br>age:", age
+    )
+  )
+)+
+  geom_point(size=3)+
+  theme_minimal()
+ggplotly(p, tooltip="text")
+p
+```
+
+
+# violin plot
+```{r}
+ggplot(data, aes(
+  x=degree, y=income, fill=degree
+))+
+  geom_violin(trim=FALSE)+
+  geom_boxplot(width=0.1, fill="white")+
+  labs(
+    title="income distribution by education level",
+    x="education level",
+    y="income"
+  )+
+  theme_minimal()
+theme(legend.position="none")
+```
+
+
+
+
+
+# correlation heatmap
+```{r}
+numeric_data<- data[, c(
+  "income",
+  "age",
+  "height",
+  "weight",
+  "hrswrk"
+)]
+
+cor_matrix<-cor(numeric_data)
+corrplot(cor_matrix,
+         method="color",
+         type="upper",
+         addCoef.col="black",
+         tl.col="black",
+         tl.srt=45)
+```
+
+
+
+
+# pairplot
+```{r}
+ggpairs(
+  data[, c(
+     "income",
+  "age",
+  "height",
+  "weight",
+  "hrswrk"
+  )]
+)
+```
+
+
+
+
+# pie chart count gender
+```{r}
+set_data<-data %>% 
+  count(sex) %>% 
+  mutate(
+    percentage=n/sum(n)*100,
+    label=paste0(round(percentage, 1),"%")
+  )
+# create a pie chart
+
+ggplot(set_data, aes(x="", y=n, fill=sex))+
+  geom_col(width=1)+
+  coord_polar(theta="y")+
+  geom_text(
+    aes(
+      label=label
+    ),
+    position=position_stack(vjust=0.5),
+    size=5
+  )+
+  labs(
+    title=" distribution of respondents by Gender",
+    fill="Gender"
+  )+
+  theme_void()
+```
+
+
+
+# bubble chart
+```{r}
+ggplot(
+  data, aes(
+    x=age,
+    y=income,
+    size=hrswrk,
+    color=sex
+  )
+)+
+  geom_point(alpha=0.5)+
+  labs(
+    title="Age income and working hrs",
+    x= "age",
+    y="income",
+    size="working hours",
+    color="sex"
+  )+
+  theme_minimal(base_size = 20)
+```
+
+
+
+## 3D scatter plot
+```{r}
+fig<- plot_ly(
+  data,
+    x=~age, 
+    y=~income,
+    z=~weight,
+    color=~sex,
+    trpe="scatter3d",
+    mode="markers",
+    marker=list(size=6)
+  )
+  
+  fig<-fig %>% 
+    layout(
+      title="3D relationship btn Age, income an d weight",
+      scene= list(
+        xaxis=list(title="Age"),
+        yaxis=list(title="Income"),
+        zaxis=list(title="weight")
+      ))
+    fig
+```
+
+
+
+
+
+# ridge line/ distribution plot
+```{r}
+ggplot(
+  data, 
+  aes(
+    x=income,
+    y=degree,
+    fill=degree
+  )
+)+
+  geom_density_ridges(alpha=0.7, bandwidth=7430)+
+  labs(
+    title=" income distribution accross education levels",
+    x="income",
+    y=" Education Level"
+  )+
+  theme_minimal()
+theme(legend.position="none")
+```
+
+
+
+
+```{r}
+ggplot(
+  data, 
+  aes(
+    x=marital,
+    y=degree,
+    fill=degree
+  )
+)+
+  geom_density_ridges(alpha=0.7, bandwidth=7430)+
+  labs(
+    title=" marital distribution across education levels",
+    x="marital",
+    y=" Education Level"
+  )+
+  theme_minimal()
+theme(legend.position="none")
+```
+
+
+
+

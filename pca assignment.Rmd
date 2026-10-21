@@ -1,0 +1,183 @@
+---
+title: "PCA R-Assignment"
+author: "MAKINI CALEB"
+date: "`r Sys.Date()`"
+output: html_document
+---
+             
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo        = TRUE,          # show the code in HTML
+  tidy        = TRUE,          # run formatR on the code
+  tidy.opts   = list(
+    comment     = FALSE,       # <-- STRIP "#" comments from displayed code
+    blank       = FALSE,       # drop blank lines
+    widthCutoff = 120          # keep long lines readable
+  ),
+  comment     = NA,            # hide the "##" prefix on output
+  warning     = FALSE,
+  message     = FALSE,
+  eval        = TRUE,
+  fig.align   = "center",
+  fig.width   = 10,
+  fig.height  = 6,
+  dpi         = 120,
+  dev         = "png",
+  fig.show    = "asis",
+  fig.keep    = "all",
+  out.width   = "100%"
+)
+                      
+```
+
+# SETTING A WORKING DIRECTORY
+```{r}
+ setwd("C:/Users/ADMIN/OneDrive/Desktop/caleb makini")
+
+```
+
+
+# load libraries
+```{r}
+library(readxl)
+library(tidyverse)
+library(corrplot)
+library(factoextra)
+library(psych)
+
+```
+# 2. Import the dataset
+```{r}
+
+data <- read_excel("PCA_Customer_Satisfaction data.xlsx", sheet = "Customer Dataset")
+```
+
+# Check structure
+```{r}
+
+str(data)
+glimpse(data)
+```
+# 3. Prepare numerical data for PCA
+# Exclude Customer_ID because it is an identifier, not a rating variable
+```{r}
+pca_data <- data %>% select(-Customer_ID)
+```
+
+
+# Check missing values and duplicates
+```{r}
+colSums(is.na(pca_data))
+sum(is.na(pca_data))
+sum(duplicated(pca_data))
+any(duplicated(data$Customer_ID))
+```
+
+
+# 4. Descriptive statistics
+# Alternative: psych::describe
+```{r}
+describe(pca_data)
+```
+
+
+# 5. Correlation matrix
+```{r}
+cor_mat <- cor(pca_data, use = "complete.obs")
+print(round(cor_mat, 2))
+```
+
+
+# Visualise correlation matrix
+```{r}
+corrplot(cor_mat, method = "color", addCoef.col = "black",
+         number.cex = 0.6, tl.col = "black", tl.srt = 45)
+```
+
+
+# Identify strongly correlated pairs (e.g., |r| > 0.5)
+```{r}
+corr_long <- as.data.frame(as.table(cor_mat)) %>%
+  filter(Var1 != Var2, abs(Freq) > 0.5) %>%
+  arrange(desc(abs(Freq)))
+print(corr_long)
+```
+
+
+# 6. Standardise variables
+```{r}
+pca_scaled <- scale(pca_data)
+```
+
+
+# 7. Run PCA
+```{r}
+pca_res <- prcomp(pca_scaled, center = TRUE, scale. = TRUE)
+summary(pca_res)
+```
+
+# 8. Eigenvalues and explained variance
+```{r}
+eigenvals <- pca_res$sdev^2
+explained_var <- eigenvals / sum(eigenvals) * 100
+cum_var <- cumsum(explained_var)
+
+eigen_table <- data.frame(
+  Component = paste0("PC", 1:length(eigenvals)),
+  Eigenvalue = eigenvals,
+  Variance_Percent = explained_var,
+  Cumulative_Percent = cum_var
+)
+print(eigen_table)
+
+# Kaiser rule: eigenvalues > 1
+kaiser_components <- eigen_table$Component[eigen_table$Eigenvalue > 1]
+print(kaiser_components)
+
+# 9. Scree plot
+fviz_eig(pca_res, addlabels = TRUE, ylim = c(0, 100),
+         barfill = "steelblue", barcolor = "black") +
+  ggtitle("Scree Plot - Customer Satisfaction PCA")
+
+# Base R scree plot
+plot(eigenvals, type = "b", pch = 19,
+     xlab = "Principal Component", ylab = "Eigenvalue",
+     main = "Scree Plot")
+abline(h = 1, col = "red", lty = 2)
+```
+
+
+
+# 10. Save selected components for further analysis
+# Example: retain first 2 components (adjust based on scree/Kaiser)
+```{r}
+selected_pcs <- data.frame(
+  Customer_ID = data$Customer_ID,
+  pca_res$x[, 1:3]
+)
+write.csv(selected_pcs, "selected_pca_components.csv", row.names = FALSE)
+```
+
+
+# 11. Component loadings
+```{r}
+loadings <- pca_res$rotation
+print(round(loadings[, 1:3], 2))
+```
+
+
+# Show largest absolute loadings for first two PCs
+```{r}
+loadings_df <- as.data.frame(pca_res$rotation) %>%
+  rownames_to_column("Variable") %>%
+  pivot_longer(-Variable, names_to = "PC", values_to = "Loading") %>%
+  group_by(PC) %>%
+  slice_max(abs(Loading), n = 3) %>%
+  arrange(PC, desc(abs(Loading)))
+print(loadings_df)
+
+# Visualise variable loadings
+fviz_pca_var(pca_res, col.var = "contrib", repel = TRUE) +
+  ggtitle("PCA Variable Loadings")
+```
+

@@ -1,0 +1,201 @@
+---
+title: "Explainable Artificial Intelligent (XAI)"
+author: "MAKINI CALEB"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+             
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo        = TRUE,          # show the code in HTML
+  tidy        = TRUE,          # run formatR on the code
+  tidy.opts   = list(
+    comment     = FALSE,       # <-- STRIP "#" comments from displayed code
+    blank       = FALSE,       # drop blank lines
+    widthCutoff = 120          # keep long lines readable
+  ),
+  comment     = NA,            # hide the "##" prefix on output
+  warning     = FALSE,
+  message     = FALSE,
+  eval        = TRUE,
+  fig.align   = "center",
+  fig.width   = 10,
+  fig.height  = 6,
+  dpi         = 120,
+  dev         = "png",
+  fig.show    = "asis",
+  fig.keep    = "all",
+  out.width   = "100%"
+)
+                      
+```
+
+# SETTING A WORKING DIRECTORY
+```{r}
+ setwd("C:/Users/ADMIN/OneDrive/Desktop/caleb makini")
+
+```
+
+
+# load libraries
+```{r}
+library(randomForest)
+library(DALEX)
+library(ggplot2)
+library(xgboost)
+library(rio)
+library(caret)
+library(ggplot2)
+library(dplyr)
+library(Matrix)
+library(Metrics)
+
+```
+
+
+# import inbuilt data
+
+```{r}
+data(mtcars)
+
+mtcars$am <- factor(mtcars$am,
+                    levels = c(0, 1),
+                    labels = c("Automatic", "Manual"))
+
+df <- mtcars[, c("am", "mpg", "hp", "wt", "cyl")]
+
+head(df)
+```
+
+
+# train random forest model
+```{r}
+set.seed(42)
+rf_model<- randomForest(
+  am~.,
+  data=df,
+  ntree=100,
+  importance=TRUE
+  
+)
+print(rf_model)
+```
+
+
+
+
+# create a DAlex explianer
+
+- the explainer will act as  a bridge btn the machine learning model and xai tools
+```{r}
+y_num<-ifelse(df$am =="Manual", 1,0)
+explainer<-DALEX::explain(
+  model=rf_model,
+  data=df[, -1],
+  y=y_num,
+  label="Random Forest",
+  verbose=FALSE
+)
+```
+
+
+# global excplainability? feature importance
+## which model influence the model the most?
+- Dalex measures feature importance by shuffling variables and observing how much model perform
+```{r}
+ global_importance<-model_parts(
+   explainer,
+   type= "variable_importance"
+ )
+global_importance
+```
+
+
+# plot global importance
+```{r}
+
+plot(global_importance)+
+  ggtitle("GLOBAL FEATURE IMPORTANCE")+
+  theme_minimal()
+```
+### interpretation
+- the lager the more important the variable is
+
+# set  a native Random fOrest Importance
+```{r}
+
+importance(rf_model)
+
+```
+
+# convert into a bar chart
+```{r}
+importance_df<-data.frame(
+  Variable= rownames(importance(rf_model)),
+  Importance=importance(rf_model)[,"MeanDecreaseGini"]
+)
+importance_df<-importance_df[
+  order(importance_df$Importance,
+  decreasing=TRUE),
+]
+```
+
+# plotting
+```{r}
+ggplot(
+  importance_df,
+  aes(
+    x=reorder(Variable, Importance),
+    y=Importance
+  )
+)+
+  geom_bar(stat="identity")+
+  coord_flip()+
+  labs(
+    title="Random Forest Variable Importance ",
+    x="variable",
+    y="mean Decrease Gini"
+  )+
+  theme_classic()
+
+```
+
+
+
+#  select car
+```{r}
+new_car<-df[1, -1]
+new_car
+```
+
+# make prediction
+```{r}
+predict(
+  rf_model, new_car
+)
+```
+
+# actual class
+```{r}
+df$am[1]
+```
+
+
+# generate local explanation
+- breakdown explanation show how each variable contribute to global to a single prediction
+```{r}
+local_explanation<- predict_parts(
+  explainer, 
+  new_observation= new_car,
+  type= "break_down"
+)
+print(local_explanation)
+```
+# plot local explanation
+```{r}
+plot(local_explanation)+
+  ggtitle(
+     "why did the model predict manual transmission")
+```
+

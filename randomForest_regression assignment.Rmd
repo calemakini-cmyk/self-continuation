@@ -1,0 +1,317 @@
+---
+title: "Random_forest Regression assignment"
+author: "MAKINI CALEB"
+date: "`r Sys.Date()`"
+output:
+  html_document: default
+  pdf_document: default
+---
+             
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo        = TRUE,          # show the code in HTML
+  tidy        = TRUE,          # run formatR on the code
+  tidy.opts   = list(
+    comment     = FALSE,       # <-- STRIP "#" comments from displayed code
+    blank       = FALSE,       # drop blank lines
+    widthCutoff = 120          # keep long lines readable
+  ),
+  comment     = NA,            # hide the "##" prefix on output
+  warning     = FALSE,
+  message     = FALSE,
+  eval        = TRUE,
+  fig.align   = "center",
+  fig.width   = 10,
+  fig.height  = 6,
+  dpi         = 120,
+  dev         = "png",
+  fig.show    = "asis",
+  fig.keep    = "all",
+  out.width   = "100%"
+)
+                      
+```
+
+# SETTING A WORKING DIRECTORY
+```{r}
+ setwd("C:/Users/ADMIN/OneDrive/Desktop/caleb makini")
+
+```
+
+# loading libraries
+```{r}
+library(tidyverse)
+library(rio)
+library(ggplot2)
+library(psych)
+library(ggthemes)
+library(summarytools)
+library(tidyr)
+library(formatR)
+library(sjmisc)
+library(caret)
+library(report)
+library(knitr)
+library(randomForest)
+library(reshape2) 
+
+```
+
+
+# Random forest regression: assignment quiz
+# import data set
+```{r}
+df<-read.csv("rfregression.csv")
+head(df)
+```
+
+# examine structure an dimension
+```{r}
+str(df)
+```
+## dimension
+```{r}
+dim(df)
+```
+
+# check for missing values
+## columwise and rowwise
+```{r}
+sum(is.na(df))
+cat("\n")
+colSums(is.na(df))
+```
+
+
+
+
+
+
+
+
+
+
+
+#  Identify and handle duplicate observations
+```{r}
+sum(duplicated(df))
+sum(duplicated(df[, !names(df) %in% "House_ID"]))
+```
+
+
+#  Explore distribution of target variable
+```{r}
+hist(
+  df$House_Price_Million_KES,
+  main = "Distribution of House Price",
+  xlab = "House Price (Million KES)",
+  col = "steelblue"
+)
+
+
+plot(
+  density(df$House_Price_Million_KES),
+  main = "Density of House Price",
+  xlab = "House Price (Million KES)"
+)
+```
+#  Examine relationships between predictors and house price
+## Identify numeric variables and descriptive analysis
+```{R}
+num_vars <- names(df)[sapply(df, is.numeric)]
+
+desc_stats <- df %>%
+  summarise(across(all_of(num_vars),
+                   list(
+                     n     = ~ sum(!is.na(.)),
+                     mean  = ~ mean(., na.rm = TRUE),
+                     sd    = ~ sd(.,   na.rm = TRUE),
+                     min   = ~ min(.,  na.rm = TRUE),
+                     q25   = ~ quantile(., 0.25, na.rm = TRUE),
+                     med   = ~ median(., na.rm = TRUE),
+                     q75   = ~ quantile(., 0.75, na.rm = TRUE),
+                     max   = ~ max(.,  na.rm = TRUE)
+                   ))) %>%
+  pivot_longer(
+    everything(),
+    names_to  = c("variable", "stat"),
+    names_sep = "_(?=[^_]+$)"   # split at the LAST underscore
+  ) %>%
+  pivot_wider(names_from = stat, values_from = value) %>%
+  arrange(variable)
+
+print(desc_stats)
+```
+
+# Correlation among numeric predictors
+```{r}
+cor_num <- cor(df[, num_vars], use = "complete.obs")
+print(round(cor_num, 2))
+
+# Correlation of numeric predictors with target
+cor_target <- cor(
+  df[, num_vars],
+  df$House_Price_Million_KES,
+  use = "complete.obs"
+)
+# Melt the correlation matrix into long format
+cor_melt <- melt(cor_num)
+colnames(cor_melt) <- c("Var1", "Var2", "Correlation")
+
+# Heatmap
+ggplot(cor_melt, aes(x = Var1, y = Var2, fill = Correlation)) +
+  geom_tile(color = "white") +
+  geom_text(aes(label = round(Correlation, 2)), size = 3, color = "black") +
+  scale_fill_gradient2(
+    low = "#B2182B", mid = "white", high = "#2166AC",
+    midpoint = 0, limits = c(-1, 1),
+    name = "Pearson\nr"
+  ) +
+  labs(
+    title = "Correlation Heatmap of Numeric Predictors",
+    x = NULL, y = NULL
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    panel.grid = element_blank()
+  ) +
+  coord_fixed()
+```
+
+#  Convert categorical variables into numerical representations
+```{r}
+df_model <- df %>% select(-House_ID)
+
+dummies <- dummyVars(House_Price_Million_KES ~ ., data = df_model)
+df_encoded <- predict(dummies, newdata = df_model) %>% as.data.frame()
+df_encoded$House_Price_Million_KES <- df_model$House_Price_Million_KES
+str(df_encoded)
+
+```
+
+
+#  Divide data into training and testing sets
+```{r}
+set.seed(123)
+train_index <- createDataPartition(
+  df_encoded$House_Price_Million_KES,
+  p = 0.8,
+  list = FALSE
+)
+
+train <- df_encoded[train_index, ]
+test  <- df_encoded[-train_index, ]
+
+cat("Train rows:", nrow(train), " Test rows:", nrow(test), "\n")
+```
+
+
+#  Build Random Forest Regression model
+```{r}
+set.seed(123)  # for reproducibility
+rf_model <- randomForest(
+  House_Price_Million_KES ~ .,
+  data = train,
+  ntree = 500,
+  mtry = 3,
+  importance = TRUE
+)
+
+print(rf_model)
+
+```
+
+#   predictions for test data
+```{r}
+pred <- predict(rf_model, newdata = test)
+head(pred)
+```
+
+# Evaluate model: RMSE, MAE, R2, MAPE
+```{r}
+actual <- test$House_Price_Million_KES
+
+rmse <- sqrt(mean((actual - pred)^2))
+mae  <- mean(abs(actual - pred))
+r2   <- 1 - sum((actual - pred)^2) / sum((actual - mean(actual))^2)
+mape <- mean(abs((actual - pred) / actual)) * 100
+
+metrics <- c(
+  RMSE = rmse,
+  MAE = mae,
+  R2 = r2,
+  MAPE = mape
+)
+
+print(round(metrics, 3))
+
+```
+
+#  Compare actual and predicted house prices
+```{r}
+comparison <- data.frame(
+  Actual = actual,
+  Predicted = pred,
+  Residual = actual - pred
+)
+
+head(comparison)
+write.csv(comparison, "actual_vs_predicted.csv", row.names = FALSE)
+```
+
+#  Plot Actual vs Predicted values
+```{r}
+ggplot(comparison, aes(x = Actual, y = Predicted)) +
+  geom_point(alpha = 0.6, color = "steelblue") +
+  geom_abline(
+    intercept = 0,
+    slope = 1,
+    color = "red",
+    linetype = "dashed"
+  ) +
+  labs(
+    title = "Actual vs Predicted House Prices",
+    x = "Actual Price (Million KES)",
+    y = "Predicted Price (Million KES)"
+  ) +
+  theme_minimal()
+```
+
+#  Examine variable importance
+```{r}
+imp <- importance(rf_model)
+print(imp[order(imp[, "%IncMSE"], decreasing = TRUE), ])
+varImpPlot(rf_model, main = "Variable Importance")
+```
+
+# 18. The most important predictors
+- The most important predictors are LocationRunda, House_Size_m2, and ConditionFair, which lead on both %IncMSE (34.6, 27.6, 27.3) and IncNodePurity (13,437; 38,729; 12,368), indicating they drive both predictive accuracy and node splits. They are closely followed by LocationKitengela, ConditionExcellent, Bedrooms, and Bathrooms (all with %IncMSE above 20), showing that location, size, condition, and room count dominate house price variation. Mid-tier predictors include ConditionGood, LocationKileleshwa, LocationKilimani, House_Age_Years, and Distance_CBD_km (%IncMSE ~14–18), while Plot_Size_m2 and LocationSyokimau contribute modestly. The least important predictors are Has_Garden (both levels), LocationRoysambu, LocationRuaka, and Parking_Spaces (%IncMSE < 7), suggesting they add little unique information once location, size, and condition are accounted for.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

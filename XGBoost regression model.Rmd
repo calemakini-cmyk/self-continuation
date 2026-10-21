@@ -1,0 +1,205 @@
+---
+title: "XGBoost Regression model"
+author: "MAKINI CALEB"
+date: "`r Sys.Date()`"
+output: html_document
+---
+             
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo        = TRUE,          # show the code in HTML
+  tidy        = TRUE,          # run formatR on the code
+  tidy.opts   = list(
+    comment     = FALSE,       # <-- STRIP "#" comments from displayed code
+    blank       = FALSE,       # drop blank lines
+    widthCutoff = 120          # keep long lines readable
+  ),
+  comment     = NA,            # hide the "##" prefix on output
+  warning     = FALSE,
+  message     = FALSE,
+  eval        = TRUE,
+  fig.align   = "center",
+  fig.width   = 10,
+  fig.height  = 6,
+  dpi         = 120,
+  dev         = "png",
+  fig.show    = "asis",
+  fig.keep    = "all",
+  out.width   = "100%"
+)
+                      
+```
+
+# SETTING A WORKING DIRECTORY
+```{r}
+ setwd("C:/Users/ADMIN/OneDrive/Desktop/caleb makini")
+
+```
+
+# loading libraries
+```{r}
+library(xgboost)
+library(rio)
+library(caret)
+library(ggplot2)
+library(dplyr)
+library(Matrix)
+library(Metrics)
+```
+
+
+# import dataset
+```{r}
+set.seed(123)
+n<-500
+HouseSize <-round(rnorm(n, 1800, 400))
+
+Bedrooms<- sample(2:6,n, replace=TRUE)
+
+Bathrooms<- sample(1:4, n, replace=TRUE)
+
+Age<-sample(1:50, n, replace=TRUE)
+
+Garage<-sample(0:3, n, replace=TRUE)
+
+DistancedCBD<- round(runif(n, 2,30),1)
+
+CrimeRate<- round(runif(n, 10,80),1)
+
+SchoolRating<-sample(1:10, n, replace=TRUE)
+
+LotSize<- round(rnorm(n, 600, 120))
+
+HousePrice<- 5000+HouseSize*180+Bedrooms*12000+Bathrooms*15000-Age*1500+Garage*8000
+              -DistancedCBD*2500-CrimeRate*900+SchoolRating*10000
+              +LotSize*60+rnorm(n,0,25000)
+
+housing_data<-data.frame(HouseSize, Bedrooms, Bathrooms,
+                          Age, Garage, DistancedCBD, CrimeRate,
+                         SchoolRating, LotSize, HousePrice)
+head(housing_data)
+```
+
+
+
+# explore data set
+```{r}
+str(housing_data)
+```
+
+## confirm for missing values
+```{r}
+colSums(is.na(housing_data))
+```
+## split data into training and testing 
+```{r}
+split_index<-createDataPartition(housing_data$HousePrice, p=0.8, list=FALSE)
+train<-housing_data[split_index, ]
+test<-housing_data[-split_index, ]
+```
+
+## create a training matrix
+```{r}
+train_x<-as.matrix(train[, 1:9])
+test_x<-as.matrix(test[, 1:9])
+train_y<-train$HousePrice
+test_y<-test$HousePrice
+```
+
+
+### converty to Dmatrix
+```{r}
+dtrain<-xgb.DMatrix(
+  data=train_x,
+  label = train_y
+)
+dtest<-xgb.DMatrix(
+  data=test_x,
+  label=test_y
+)
+```
+
+
+## train xgboost model
+```{r}
+params<- list(
+  objective="reg:squarederror",
+  eval_metric="rmse",
+  eta=0.10,
+  max.depth=5,
+  subsample= 0.8,
+  colsample_bytree=0.8
+  
+)
+xgb_model<-xgb.train(
+  params=params,
+  data=dtrain,
+  nrounds=150,
+  watchlist=list(train=dtrain),
+  verbose=1
+  )
+```
+
+## predict house price
+```{r}
+predic<-predict(xgb_model,
+                dtest)
+head(predic)
+```
+
+
+
+## model evaluation
+```{r}
+rmse_value<-rmse(test_y, predic)
+mae_value<-mae(test_y, predic)
+mse_value<-mse(test_y, predic)
+r2<-cor(test_y, predic)^2
+cat("rmse:",rmse_value,"\n")
+cat("mae",mae_value,"\n")
+mse_value
+r2
+```
+
+
+# scatter plot of actual vs predicted
+```{r}
+ggplot(data.frame(
+  Actual=test_y, predicted=predic
+),aes(
+  Actual, predicted
+))+
+  geom_point(color="yellowgreen", alpha=0.7)+
+  geom_abline(slope = 1, intercept = 0, colour="red", linewidth=1, linetype="dotted")+
+  theme_minimal()
+```
+
+
+
+
+# feature importance 
+```{r}
+importance<-xgb.importance(feature_names = colnames(train_x),
+model=xgb_model
+)
+importance
+```
+
+
+### feature importance plot
+```{r}
+xgb.plot.importance(
+  importance_matrix=importance
+)
+```
+
+
+
+### predict new instance
+```{r}
+new_house<-matrix(c(2200, 4,3, 8, 2, 10, 20, 8, 700),nrow=1)
+new_house<- xgb.DMatrix(new_house)
+cat("predicted house model:",predict(xgb_model, new_house))
+```
+
+

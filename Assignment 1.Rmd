@@ -1,0 +1,265 @@
+---
+title: "Assignment 1"
+author: "MAKINI Caleb"
+date: "`r Sys.Date()`"
+output: html_document
+---
+             
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo        = TRUE,          # show the code in HTML
+  tidy        = TRUE,          # run formatR on the code
+  tidy.opts   = list(
+    comment     = FALSE,       # <-- STRIP "#" comments from displayed code
+    blank       = FALSE,       # drop blank lines
+    widthCutoff = 120          # keep long lines readable
+  ),
+  comment     = NA,            # hide the "##" prefix on output
+  warning     = FALSE,
+  message     = FALSE,
+  eval        = TRUE,
+  fig.align   = "center",
+  fig.width   = 10,
+  fig.height  = 6,
+  dpi         = 120,
+  dev         = "png",
+  fig.show    = "asis",
+  fig.keep    = "all",
+  out.width   = "100%"
+)
+                      
+```
+# assignment
+# setting working directory
+```{r}
+setwd("C:/Users/ADMIN/OneDrive/Desktop/caleb makini")
+```
+
+
+# loading the libraries
+```{r}
+library(dplyr)
+library(rio)
+library(ggplot2)
+library(tidyverse)
+library(psych)
+library(formatR)
+```
+# importing data 
+```{r}
+kl<-import("data1.csv")
+head(kl)
+```
+# Data cleaning progress
+
+## Checking if their exist missing values
+```{r}
+miss_val<-sum(is.na(kl))
+miss_val
+```
+## identification of missing varuables
+```{r}
+colSums(is.na(kl))
+```
+## Removing  missing values
+```{r}
+
+clean_data<-na.omit(kl)
+head(clean_data)
+```
+## checking whether clean data still have any missing value
+```{r}
+colSums(is.na(clean_data))
+```
+## random reploacing of missing values with mean
+
+# Descriptive statistics
+```{r}
+
+describe(kl)
+```
+
+
+# replace the missing values of age with mean
+```{r}
+kl$Age[is.na(kl$Age)]<-mean(kl$Age,na.rm=TRUE)
+```
+#### conclusion
+#  DAta above has no missing values
+
+
+
+## checking existence of outliers
+
+```{r}
+boxplot(kl$ExamScore, main="ExamScore Distribution")
+
+```
+## Exam score lacks outliers
+
+
+### checking using family Income
+```{r}
+boxplot(kl$FamilyIncome, main="FamilyIncome Distribution")
+
+```
+# FamilyIncome Free from outliers
+
+### checking using Age
+```{r}
+boxplot(kl$Age, main="Check outliers using age")
+```
+
+# Outliers not present while using age
+
+### Checking using PreviousGPA
+```{r}
+boxplot(kl$PreviousGPA, main=" check outliers using PreviousGPA")
+```
+# Outliers unavailable using PreviousGPA
+
+
+### checking using Attendance
+```{r}
+boxplot(kl$Attendance, main="check existence of outliers using Attendance")
+```
+# clean from outliuers using Attendance
+
+### checking using SleepHours
+```{r}
+boxplot(kl$SleepHours, main="|check outliers usinf SleepHours")
+```
+# clean from outliuers using SleepHours
+
+
+
+### checking using StudyHours
+```{r}
+boxplot(kl$StudyHours, main="checking using StudyHours")
+```
+
+# clean from outliuers using Study hours
+
+
+### assuming outliers exists. Then 
+## we handle outliers using 1.5 IQR rule
+```{r}
+Q1<-quantile(kl$ExamScore, 0.25)
+Q3<-quantile(kl$ExamScore, 0.75)
+IQR<- Q3-Q1
+lower_bound<-Q1-1.5*IQR
+upper_bound<-Q3+1.5*IQR
+cp<-kl[kl$ExamScore >= lower_bound & kl$ExamScore <= upper_bound, ]
+```
+
+### mean, median, varaince and standard deviation of the data
+
+```{r}
+mean_val<-mean(cp$ExamScore, na.rm=TRUE)
+median_val <-median(cp$ExamScore, na.rm=TRUE)
+variance_val <-var(cp$ExamScore, na.rm=TRUE)
+sd_val<-sd(cp$ExamScore, na.rm=TRUE)
+print(paste("mean:", mean_val ))
+print(paste("median:", median_val ))
+print(paste("variance:", variance_val ))
+print(paste("standard deviationincome:", sd_val ))
+```
+
+### plotting cp cleaned data
+#  Verification & identification of outliers
+```{r}
+boxplot(cp$ExamScore, main="Box plot for identification of outliers")
+```
+##  data free from outliers
+
+
+### Visualization using histogram
+## exam score
+```{r}
+hist(cp$ExamScore,
+     xlab = "ExamScore",
+     ylab="Frequency",
+     main="Histogram showing Distripution of ExamScore",
+     col = "yellowgreen")
+  
+```
+## using previousGPA
+```{r}
+hist(cp$PreviousGPA,
+     xlab = "PreviousGPA",
+     ylab="Frequency",
+     main="Histogram showing Distripution of PreviousGPA",
+     col = "yellow")
+  
+```
+
+### visualization using boxplot
+## boxplot using Age
+```{r}
+boxplot(cp$Age,
+     ylab = "Age",
+    
+     main="Boxplot showing Distripution of Age",
+     col = "orange")
+  
+```
+
+## boxplot using Attendance 
+
+```{r}
+boxplot(cp$Attendance,
+     ylab = "Age",
+    
+     main="Boxplot showing Distripution of Age",
+     col = "grey")
+```
+
+### visualization using scatterplots
+
+## Scatter plot using previusGPA against Age
+```{r}
+ggplot(cp, aes(x=Age, y=PreviousGPA))+
+  geom_point(col="purple", size=2)+
+  labs(x="Age of Students",
+       y=" previousGPA of Students",
+       title="     scatter plot of previusGPA against Age")
+```
+
+
+## Scatter plot using ExamScore against Age
+```{r}
+ggplot(cp, aes(x=Age, y=ExamScore))+
+  geom_point(col="blue", size=2)+
+  labs(x="Age of Students",
+       y=" ExamScore of Students",
+       title="     scatter plot of ExamScore against Age")
+```
+
+## Scatter plot using ExamScore against PreviousGPA
+```{r}
+ggplot(cp, aes(x=PreviousGPA, y=ExamScore))+
+  geom_point(col="brown", size=2)+
+  labs(x="Age of Students",
+       y=" ExamScore of Students",
+       title="     scatter plot of ExamScore against PreviousGPA")
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

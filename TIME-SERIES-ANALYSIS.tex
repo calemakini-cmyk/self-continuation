@@ -1,0 +1,355 @@
+% Options for packages loaded elsewhere
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
+\documentclass[
+]{article}
+\usepackage{xcolor}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\setcounter{secnumdepth}{-\maxdimen} % remove section numbering
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{textcomp} % provide euro and other symbols
+\else % if luatex or xetex
+  \usepackage{unicode-math} % this also loads fontspec
+  \defaultfontfeatures{Scale=MatchLowercase}
+  \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
+\fi
+\usepackage{lmodern}
+\ifPDFTeX\else
+  % xetex/luatex font selection
+\fi
+% Use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\IfFileExists{microtype.sty}{% use microtype if available
+  \usepackage[]{microtype}
+  \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\makeatletter
+\@ifundefined{KOMAClassName}{% if non-KOMA class
+  \IfFileExists{parskip.sty}{%
+    \usepackage{parskip}
+  }{% else
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+}{% if KOMA class
+  \KOMAoptions{parskip=half}}
+\makeatother
+\usepackage{color}
+\usepackage{fancyvrb}
+\newcommand{\VerbBar}{|}
+\newcommand{\VERB}{\Verb[commandchars=\\\{\}]}
+\DefineVerbatimEnvironment{Highlighting}{Verbatim}{commandchars=\\\{\}}
+% Add ',fontsize=\small' for more characters per line
+\usepackage{framed}
+\definecolor{shadecolor}{RGB}{248,248,248}
+\newenvironment{Shaded}{\begin{snugshade}}{\end{snugshade}}
+\newcommand{\AlertTok}[1]{\textcolor[rgb]{0.94,0.16,0.16}{#1}}
+\newcommand{\AnnotationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\AttributeTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{#1}}
+\newcommand{\BaseNTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\BuiltInTok}[1]{#1}
+\newcommand{\CharTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\CommentTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
+\newcommand{\CommentVarTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\ConstantTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{#1}}
+\newcommand{\ControlFlowTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\DataTypeTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{#1}}
+\newcommand{\DecValTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\DocumentationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\ErrorTok}[1]{\textcolor[rgb]{0.64,0.00,0.00}{\textbf{#1}}}
+\newcommand{\ExtensionTok}[1]{#1}
+\newcommand{\FloatTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\FunctionTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\ImportTok}[1]{#1}
+\newcommand{\InformationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\KeywordTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\NormalTok}[1]{#1}
+\newcommand{\OperatorTok}[1]{\textcolor[rgb]{0.81,0.36,0.00}{\textbf{#1}}}
+\newcommand{\OtherTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{#1}}
+\newcommand{\PreprocessorTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
+\newcommand{\RegionMarkerTok}[1]{#1}
+\newcommand{\SpecialCharTok}[1]{\textcolor[rgb]{0.81,0.36,0.00}{\textbf{#1}}}
+\newcommand{\SpecialStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\StringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\VariableTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\VerbatimStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\WarningTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\usepackage{graphicx}
+\makeatletter
+\newsavebox\pandoc@box
+\newcommand*\pandocbounded[1]{% scales image to fit in text height/width
+  \sbox\pandoc@box{#1}%
+  \Gscale@div\@tempa{\textheight}{\dimexpr\ht\pandoc@box+\dp\pandoc@box\relax}%
+  \Gscale@div\@tempb{\linewidth}{\wd\pandoc@box}%
+  \ifdim\@tempb\p@<\@tempa\p@\let\@tempa\@tempb\fi% select the smaller of both
+  \ifdim\@tempa\p@<\p@\scalebox{\@tempa}{\usebox\pandoc@box}%
+  \else\usebox{\pandoc@box}%
+  \fi%
+}
+% Set default figure placement to htbp
+\def\fps@figure{htbp}
+\makeatother
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\usepackage{bookmark}
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
+\urlstyle{same}
+\hypersetup{
+  pdftitle={TIME SERIES ANALYSIS},
+  pdfauthor={MAKINI Caleb},
+  hidelinks,
+  pdfcreator={LaTeX via pandoc}}
+
+\title{TIME SERIES ANALYSIS}
+\author{MAKINI Caleb}
+\date{2026-09-28}
+
+\begin{document}
+\maketitle
+
+\section{setting a working directory}\label{setting-a-working-directory}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{setwd}\NormalTok{(}\StringTok{"C:/Users/ADMIN/OneDrive/Desktop/caleb makini"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{library}\NormalTok{(ggplot2)}
+\FunctionTok{library}\NormalTok{(ggthemes)}
+\FunctionTok{library}\NormalTok{(stats)}
+\FunctionTok{library}\NormalTok{(forecast)}
+\FunctionTok{library}\NormalTok{(tseries)}
+\FunctionTok{library}\NormalTok{(formatR)}
+\FunctionTok{library}\NormalTok{(papaja)}
+\FunctionTok{library}\NormalTok{(report)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{data }\OtherTok{=} \FunctionTok{data.frame}\NormalTok{(}\AttributeTok{date =} \FunctionTok{seq}\NormalTok{(}\FunctionTok{as.Date}\NormalTok{(}\StringTok{"2025{-}01{-}01"}\NormalTok{), }\FunctionTok{as.Date}\NormalTok{(}\StringTok{"2026{-}12{-}31"}\NormalTok{), }\AttributeTok{by =} \StringTok{"month"}\NormalTok{),}
+    \AttributeTok{value =} \FunctionTok{c}\NormalTok{(}\DecValTok{100}\NormalTok{, }\DecValTok{102}\NormalTok{, }\DecValTok{141}\NormalTok{, }\DecValTok{160}\NormalTok{, }\DecValTok{128}\NormalTok{, }\DecValTok{200}\NormalTok{, }\DecValTok{202}\NormalTok{, }\DecValTok{204}\NormalTok{, }\DecValTok{260}\NormalTok{, }\DecValTok{208}\NormalTok{, }\DecValTok{300}\NormalTok{, }\DecValTok{320}\NormalTok{, }\DecValTok{250}\NormalTok{, }\DecValTok{202}\NormalTok{,}
+        \DecValTok{140}\NormalTok{, }\DecValTok{160}\NormalTok{, }\DecValTok{138}\NormalTok{, }\DecValTok{200}\NormalTok{, }\DecValTok{202}\NormalTok{, }\DecValTok{204}\NormalTok{, }\DecValTok{265}\NormalTok{, }\DecValTok{208}\NormalTok{, }\DecValTok{359}\NormalTok{, }\DecValTok{380}\NormalTok{))}
+\FunctionTok{head}\NormalTok{(data)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+        date value
+1 2025-01-01   100
+2 2025-02-01   102
+3 2025-03-01   141
+4 2025-04-01   160
+5 2025-05-01   128
+6 2025-06-01   200
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{data}\SpecialCharTok{$}\NormalTok{date }\OtherTok{\textless{}{-}} \FunctionTok{as.Date}\NormalTok{(data}\SpecialCharTok{$}\NormalTok{date)}
+\FunctionTok{head}\NormalTok{(data)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+        date value
+1 2025-01-01   100
+2 2025-02-01   102
+3 2025-03-01   141
+4 2025-04-01   160
+5 2025-05-01   128
+6 2025-06-01   200
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{ggplot}\NormalTok{(data, }\FunctionTok{aes}\NormalTok{(}\AttributeTok{x =}\NormalTok{ date, }\AttributeTok{y =}\NormalTok{ value)) }\SpecialCharTok{+} \FunctionTok{geom\_line}\NormalTok{(}\AttributeTok{color =} \StringTok{"blue"}\NormalTok{) }\SpecialCharTok{+} \FunctionTok{labs}\NormalTok{(}\AttributeTok{title =} \StringTok{"time series data"}\NormalTok{,}
+    \AttributeTok{x =} \StringTok{"date"}\NormalTok{, }\AttributeTok{y =} \StringTok{"value"}\NormalTok{) }\SpecialCharTok{+} \FunctionTok{theme\_minimal}\NormalTok{()}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{center}\includegraphics[width=1\linewidth]{TIME-SERIES-ANALYSIS_files/figure-latex/unnamed-chunk-5-1} \end{center}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{ts\_data }\OtherTok{\textless{}{-}} \FunctionTok{ts}\NormalTok{(data}\SpecialCharTok{$}\NormalTok{value, }\AttributeTok{frequency =} \DecValTok{12}\NormalTok{, }\AttributeTok{start =} \FunctionTok{c}\NormalTok{(}\DecValTok{2025}\NormalTok{, }\DecValTok{1}\NormalTok{))}
+\NormalTok{decomposed\_data }\OtherTok{\textless{}{-}} \FunctionTok{decompose}\NormalTok{(ts\_data)}
+\FunctionTok{plot}\NormalTok{(decomposed\_data)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{center}\includegraphics[width=1\linewidth]{TIME-SERIES-ANALYSIS_files/figure-latex/unnamed-chunk-6-1} \end{center}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{acf}\NormalTok{(ts\_data, }\AttributeTok{lag.max =} \DecValTok{20}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{center}\includegraphics[width=1\linewidth]{TIME-SERIES-ANALYSIS_files/figure-latex/unnamed-chunk-7-1} \end{center}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{pacf}\NormalTok{(ts\_data, }\AttributeTok{lag.max =} \DecValTok{20}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{center}\includegraphics[width=1\linewidth]{TIME-SERIES-ANALYSIS_files/figure-latex/unnamed-chunk-8-1} \end{center}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{adf\_results }\OtherTok{\textless{}{-}} \FunctionTok{adf.test}\NormalTok{(ts\_data)}
+\FunctionTok{print}\NormalTok{(adf\_results)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+
+    Augmented Dickey-Fuller Test
+
+data:  ts_data
+Dickey-Fuller = -1.4364, Lag order = 2, p-value = 0.7871
+alternative hypothesis: stationary
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{diff\_data }\OtherTok{\textless{}{-}} \FunctionTok{diff}\NormalTok{(ts\_data)}
+\FunctionTok{plot}\NormalTok{(diff\_data, }\AttributeTok{main =} \StringTok{" differenced time series data"}\NormalTok{, }\AttributeTok{col =} \StringTok{"red"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{center}\includegraphics[width=1\linewidth]{TIME-SERIES-ANALYSIS_files/figure-latex/unnamed-chunk-10-1} \end{center}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{adf.test}\NormalTok{(diff\_data)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+
+    Augmented Dickey-Fuller Test
+
+data:  diff_data
+Dickey-Fuller = -1.4537, Lag order = 2, p-value = 0.7805
+alternative hypothesis: stationary
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{diff2\_data }\OtherTok{\textless{}{-}} \FunctionTok{diff}\NormalTok{(diff\_data)}
+\NormalTok{diff3\_data }\OtherTok{\textless{}{-}} \FunctionTok{diff}\NormalTok{(diff2\_data)}
+\NormalTok{diff4\_data }\OtherTok{\textless{}{-}} \FunctionTok{diff}\NormalTok{(diff3\_data)}
+\FunctionTok{plot}\NormalTok{(diff4\_data, }\AttributeTok{main =} \StringTok{" differenced time series data"}\NormalTok{, }\AttributeTok{col =} \StringTok{"red"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{center}\includegraphics[width=1\linewidth]{TIME-SERIES-ANALYSIS_files/figure-latex/unnamed-chunk-11-1} \end{center}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{adf.test}\NormalTok{(diff4\_data)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+
+    Augmented Dickey-Fuller Test
+
+data:  diff4_data
+Dickey-Fuller = -4.1327, Lag order = 2, p-value = 0.01863
+alternative hypothesis: stationary
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{arima\_model }\OtherTok{\textless{}{-}} \FunctionTok{auto.arima}\NormalTok{(diff4\_data)}
+\FunctionTok{summary}\NormalTok{(arima\_model)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+Series: diff4_data 
+ARIMA(2,0,0) with zero mean 
+
+Coefficients:
+          ar1      ar2
+      -1.5190  -0.8801
+s.e.   0.1048   0.0951
+
+sigma^2 = 9662:  log likelihood = -121.1
+AIC=248.21   AICc=249.71   BIC=251.19
+
+Training set error measures:
+                   ME     RMSE      MAE       MPE     MAPE      MASE       ACF1
+Training set 2.459696 93.24984 74.28143 -372.5573 406.7952 0.8151598 -0.2279084
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{forecast\_arima }\OtherTok{\textless{}{-}} \FunctionTok{forecast}\NormalTok{(arima\_model, }\AttributeTok{h =} \DecValTok{6}\NormalTok{)}
+\FunctionTok{head}\NormalTok{(forecast\_arima)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+$method
+[1] "ARIMA(2,0,0) with zero mean"
+
+$model
+Series: diff4_data 
+ARIMA(2,0,0) with zero mean 
+
+Coefficients:
+          ar1      ar2
+      -1.5190  -0.8801
+s.e.   0.1048   0.0951
+
+sigma^2 = 9662:  log likelihood = -121.1
+AIC=248.21   AICc=249.71   BIC=251.19
+
+$level
+[1] 80 95
+
+$mean
+            Jan        Feb        Mar        Apr        May        Jun
+2027  565.88077 -275.13783  -80.13169  363.87823 -482.19113  412.16653
+
+$lower
+                80%        95%
+Jan 2027  439.91199  373.22815
+Feb 2027 -504.22295 -625.49329
+Mar 2027 -371.33238 -525.48472
+Apr 2027   54.44133 -109.36466
+May 2027 -791.62892 -955.43540
+Jun 2027   89.63132  -81.10851
+
+$upper
+                80%        95%
+Jan 2027  691.84955 758.533396
+Feb 2027  -46.05271  75.217634
+Mar 2027  211.06901 365.221343
+Apr 2027  673.31512 837.121114
+May 2027 -172.75333  -8.946859
+Jun 2027  734.70175 905.441575
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{plot}\NormalTok{(forecast\_arima)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{center}\includegraphics[width=1\linewidth]{TIME-SERIES-ANALYSIS_files/figure-latex/unnamed-chunk-13-1} \end{center}
+
+\section{report}\label{report}
+
+\end{document}

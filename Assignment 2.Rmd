@@ -1,0 +1,273 @@
+---
+title: "Assignment 2"
+author: "MAKINI CALEB"
+date: "`r Sys.Date()`"
+output: html_document
+---
+             
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo        = TRUE,          # show the code in HTML
+  tidy        = TRUE,          # run formatR on the code
+  tidy.opts   = list(
+    comment     = FALSE,       # <-- STRIP "#" comments from displayed code
+    blank       = FALSE,       # drop blank lines
+    widthCutoff = 120          # keep long lines readable
+  ),
+  comment     = NA,            # hide the "##" prefix on output
+  warning     = FALSE,
+  message     = FALSE,
+  eval        = TRUE,
+  fig.align   = "center",
+  fig.width   = 10,
+  fig.height  = 6,
+  dpi         = 120,
+  dev         = "png",
+  fig.show    = "asis",
+  fig.keep    = "all",
+  out.width   = "100%"
+)
+                      
+```
+
+# setting a working directory
+```{r}
+setwd("C:/Users/ADMIN/OneDrive/Desktop/caleb makini")
+```
+# loading Libraries
+```{r}
+library(dplyr)
+library(ggplot2)
+library(tidyverse)
+library(sjmisc)
+library(summarytools)
+```
+
+
+# import file
+
+```{r}
+mnp<-read.csv("mnpulate.csv")
+head(mnp)
+```
+
+### Task 1
+#### filter cars to isolate  wheelbase >110
+
+```{r}
+wheel_filter<-mnp %>% 
+  filter(Wheelbase<110)
+head(wheel_filter)
+```
+
+
+## filter to include cars only of type sedan- USA 
+## filter origin
+```{r}
+originmnf<-mnp %>% 
+   filter(Origin=="USA")
+head(originmnf)
+```
+## filter type
+```{r}
+typec<-originmnf %>% 
+  filter(Type=="Sedan")
+head(typec)
+```
+
+
+
+
+
+### Task 2
+# Selection of columns
+# continous columns
+```{r}
+sel_cont<-mnp %>% 
+  select(Wheelbase, Length, Width, Weight )
+head(sel_cont)
+```
+# categorical columns
+
+```{r}
+sel_des<-mnp %>% 
+  select(Model, Origin, Type, Manufacturer )
+head(sel_des)
+```
+
+
+
+## task 3:
+# Creation or modification of variables
+```{r}
+create <- mnp %>% 
+  mutate(weight_to_horsepower = Weight / Horsepower)
+
+head(create)
+```
+
+
+
+
+
+
+# size class
+```{r}
+size_class<-mnp %>%
+  mutate(sized_class=ifelse(Wheelbase<105,"Compact",ifelse(Wheelbase<=110,"Midsize","Large")))
+head(size_class)
+```
+
+
+
+
+# task 4:
+# continous descending
+```{r}
+horse_desc<-mnp %>% 
+  arrange(desc(Horsepower))
+head(horse_desc)
+
+```
+# ascending order to mpg.city
+```{r}
+mpg_asc<-horse_desc %>% 
+  arrange(MPG.city)
+head(mpg_asc)
+```
+
+# sort cars by A-Z
+```{r}
+a_z_sort<-mnp %>% 
+ 
+group_by(Type) %>% 
+          arrange(Manufacturer)
+
+  
+head(a_z_sort)
+```
+# SORTING BY TYPE NOW
+```{r}
+sort_by_type<-a_z_sort %>% 
+group_by(Type) %>% 
+arrange(Manufacturer)
+          
+
+print(sort_by_type)
+```
+
+```{r}
+colSums(is.na(mnp))
+```
+
+
+
+
+
+
+
+# task 5:
+# compute summary statistics 
+# mean, median,  and standard deviation for continous variables
+# data checking for missing values
+```{r}
+mv<-sum(is.na(mnp))
+mv # NO MISSING VALUES
+```
+# CHECKING OUTLIERS 0n horsepower
+```{r}
+boxplot(mnp$Horsepower, main="check outliers")# No outliers
+
+```
+
+# perfoming mean, median and sd to horsepower
+
+```{r}
+mean_value<-mean(mnp$Horsepower, na.rm=TRUE)
+median_value <-median(mnp$Horsepower, na.rm=TRUE)
+variance_value <-var(mnp$Horsepower, na.rm=TRUE)
+sd_value <-sd(mnp$Horsepower, na.rm=TRUE)
+print(paste("mean:", mean_value ))
+print(paste("median:", median_value ))
+print(paste("variance:", variance_value ))
+print(paste("standard deviation:", sd_value ))
+```
+
+
+
+
+
+
+# CHECKING OUTLIERS on price
+```{r}
+boxplot(mnp$Price, main="check outliers")# No outliers
+
+```
+
+# perfoming mean, median and sd to price
+
+```{r}
+mean_value<-mean(mnp$Price, na.rm=TRUE)
+median_value <-median(mnp$Price, na.rm=TRUE)
+variance_value <-var(mnp$Price, na.rm=TRUE)
+sd_value <-sd(mnp$Price, na.rm=TRUE)
+print(paste("mean:", mean_value ))
+print(paste("median:", median_value ))
+print(paste("variance:", variance_value ))
+print(paste("standard deviation:", sd_value ))
+```
+
+```{r}
+colSums(is.na(mnp))
+```
+# summary statistics  of horsepower and price
+
+```{r}
+sam_tab<-mnp %>% 
+group_by(Type) %>% 
+summarise(count=n(),
+mean_power=mean(Horsepower),
+median_power=median(Horsepower),
+std_dv_power=sd(Horsepower),
+mean_price=mean(Price),
+median_price=median(Price),
+std_dv_price=sd(Price))
+print(sam_tab)
+
+```
+
+
+
+
+# group data by categories
+## summary statistics  of type
+
+```{r}
+sam_tab<-mnp %>% 
+group_by(Type) %>% 
+summarise(count=n(),
+mean_price=mean(Price),
+mean_mileage=median(MPG.city),
+)
+print(sam_tab)
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

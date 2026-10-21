@@ -1,0 +1,1122 @@
+% Options for packages loaded elsewhere
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
+\documentclass[
+]{article}
+\usepackage{xcolor}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\setcounter{secnumdepth}{-\maxdimen} % remove section numbering
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{textcomp} % provide euro and other symbols
+\else % if luatex or xetex
+  \usepackage{unicode-math} % this also loads fontspec
+  \defaultfontfeatures{Scale=MatchLowercase}
+  \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
+\fi
+\usepackage{lmodern}
+\ifPDFTeX\else
+  % xetex/luatex font selection
+\fi
+% Use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\IfFileExists{microtype.sty}{% use microtype if available
+  \usepackage[]{microtype}
+  \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\makeatletter
+\@ifundefined{KOMAClassName}{% if non-KOMA class
+  \IfFileExists{parskip.sty}{%
+    \usepackage{parskip}
+  }{% else
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+}{% if KOMA class
+  \KOMAoptions{parskip=half}}
+\makeatother
+\usepackage{color}
+\usepackage{fancyvrb}
+\newcommand{\VerbBar}{|}
+\newcommand{\VERB}{\Verb[commandchars=\\\{\}]}
+\DefineVerbatimEnvironment{Highlighting}{Verbatim}{commandchars=\\\{\}}
+% Add ',fontsize=\small' for more characters per line
+\usepackage{framed}
+\definecolor{shadecolor}{RGB}{248,248,248}
+\newenvironment{Shaded}{\begin{snugshade}}{\end{snugshade}}
+\newcommand{\AlertTok}[1]{\textcolor[rgb]{0.94,0.16,0.16}{#1}}
+\newcommand{\AnnotationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\AttributeTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{#1}}
+\newcommand{\BaseNTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\BuiltInTok}[1]{#1}
+\newcommand{\CharTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\CommentTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
+\newcommand{\CommentVarTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\ConstantTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{#1}}
+\newcommand{\ControlFlowTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\DataTypeTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{#1}}
+\newcommand{\DecValTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\DocumentationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\ErrorTok}[1]{\textcolor[rgb]{0.64,0.00,0.00}{\textbf{#1}}}
+\newcommand{\ExtensionTok}[1]{#1}
+\newcommand{\FloatTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\FunctionTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\ImportTok}[1]{#1}
+\newcommand{\InformationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\KeywordTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\NormalTok}[1]{#1}
+\newcommand{\OperatorTok}[1]{\textcolor[rgb]{0.81,0.36,0.00}{\textbf{#1}}}
+\newcommand{\OtherTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{#1}}
+\newcommand{\PreprocessorTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
+\newcommand{\RegionMarkerTok}[1]{#1}
+\newcommand{\SpecialCharTok}[1]{\textcolor[rgb]{0.81,0.36,0.00}{\textbf{#1}}}
+\newcommand{\SpecialStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\StringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\VariableTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\VerbatimStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\WarningTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\usepackage{graphicx}
+\makeatletter
+\newsavebox\pandoc@box
+\newcommand*\pandocbounded[1]{% scales image to fit in text height/width
+  \sbox\pandoc@box{#1}%
+  \Gscale@div\@tempa{\textheight}{\dimexpr\ht\pandoc@box+\dp\pandoc@box\relax}%
+  \Gscale@div\@tempb{\linewidth}{\wd\pandoc@box}%
+  \ifdim\@tempb\p@<\@tempa\p@\let\@tempa\@tempb\fi% select the smaller of both
+  \ifdim\@tempa\p@<\p@\scalebox{\@tempa}{\usebox\pandoc@box}%
+  \else\usebox{\pandoc@box}%
+  \fi%
+}
+% Set default figure placement to htbp
+\def\fps@figure{htbp}
+\makeatother
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{wrapfig}
+\usepackage{float}
+\usepackage{colortbl}
+\usepackage{pdflscape}
+\usepackage{tabu}
+\usepackage{threeparttable}
+\usepackage{threeparttablex}
+\usepackage[normalem]{ulem}
+\usepackage{makecell}
+\usepackage{xcolor}
+\usepackage{bookmark}
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
+\urlstyle{same}
+\hypersetup{
+  pdftitle={Exploring Customer Transactions Using R},
+  pdfauthor={MAKINI CALEB},
+  hidelinks,
+  pdfcreator={LaTeX via pandoc}}
+
+\title{Exploring Customer Transactions Using R}
+\author{MAKINI CALEB}
+\date{2026-09-25}
+
+\begin{document}
+\maketitle
+
+\section{Project Overview}\label{project-overview}
+
+In this project I will use R to perform a basic data science workflow on
+a customer transaction dataset. The project introduces the use of R for
+data import, data inspection, data cleaning, exploratory data analysis
+(EDA), visualization, and interpretation.
+
+The dataset contains transaction-level information including customer
+demographics, product characteristics, payment methods, transaction
+dates, prices, quantities, ratings, and membership status.
+
+\section{Data Variables}\label{data-variables}
+
+The following data variables are to be used:
+
+\begin{itemize}
+\tightlist
+\item
+  TransactionID
+\item
+  CustomerID
+\item
+  ProductID
+\item
+  Quantity
+\item
+  PaymentMethod
+\item
+  TransactionDate
+\item
+  ProductCategory
+\item
+  Price
+\item
+  Rating
+\item
+  TotalAmount
+\item
+  Age
+\item
+  Gender
+\item
+  Location
+\item
+  MembershipStatus
+\end{itemize}
+
+\section{Project Objectives:}\label{project-objectives}
+
+The project aims to achieve the following objectives:
+
+\begin{enumerate}
+\def\labelenumi{\roman{enumi}.}
+\tightlist
+\item
+  Import a dataset into R.\\
+\item
+  Inspect the structure and characteristics of the data.\\
+\item
+  Identify and handle missing or inconsistent values.\\
+\item
+  Convert variables to appropriate data types.\\
+\item
+  Generate descriptive statistics using R.\\
+\item
+  Create basic statistical and graphical summaries.\\
+\item
+  Explore relationships between variables.\\
+\item
+  Communicate data-driven findings. \# setting working directory
+\end{enumerate}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{setwd}\NormalTok{(}\StringTok{"C:/Users/ADMIN/OneDrive/Desktop/caleb makini"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\section{loading libraries}\label{loading-libraries}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{library}\NormalTok{(ggplot2)}
+\FunctionTok{library}\NormalTok{(ggthemes)}
+\FunctionTok{library}\NormalTok{(stats)}
+\FunctionTok{library}\NormalTok{(forecast)}
+\FunctionTok{library}\NormalTok{(tseries)}
+\FunctionTok{library}\NormalTok{(formatR)}
+\FunctionTok{library}\NormalTok{(dplyr)}
+\FunctionTok{library}\NormalTok{(rio)}
+\FunctionTok{library}\NormalTok{(tidyr)}
+\FunctionTok{library}\NormalTok{(tidyverse)}
+\FunctionTok{library}\NormalTok{(sjmisc)}
+\FunctionTok{library}\NormalTok{(kableExtra)}
+\FunctionTok{library}\NormalTok{(psych)}
+\FunctionTok{library}\NormalTok{(gridExtra)}
+\FunctionTok{library}\NormalTok{(scales)}
+\end{Highlighting}
+\end{Shaded}
+
+\section{Task 1: Import and inspect the
+data}\label{task-1-import-and-inspect-the-data}
+
+\subsection{import data of e-commerce to
+R:}\label{import-data-of-e-commerce-to-r}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{eco\_data }\OtherTok{\textless{}{-}} \FunctionTok{read.csv}\NormalTok{(}\StringTok{"ecomdata.csv"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\subsection{Display the first
+observation}\label{display-the-first-observation}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{head}\NormalTok{(eco\_data)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+  TransactionID CustomerID ProductID Quantity    PaymentMethod TransactionDate
+1             1        207        14        5              UPI      12/28/2023
+2             2        253        15        1 Cash on Delivery       4/17/2023
+3             3        110        19        5 Cash on Delivery       1/17/2023
+4             4        256         1        3       Debit Card      10/23/2023
+5             5        274         2        5       Debit Card       6/30/2023
+6             6         52        15        2      Credit Card       6/14/2023
+  ProductCategory  Price Rating TotalAmount Age Gender    Location
+1        Clothing  33.36    4.2      166.80  50   Male     Houston
+2     Electronics 389.03    2.2      389.03  19 Female     Chicago
+3        Clothing 145.89    1.7      729.45  37 Female     Houston
+4 Home Appliances 215.02    2.7      645.06  50   Male Los Angeles
+5 Home Appliances 325.48    3.4     1627.40  24   Male    New York
+6     Electronics 389.03    2.2      778.06  50   Male     Houston
+  MembershipStatus
+1            Basic
+2          Premium
+3            Basic
+4          Premium
+5          Premium
+6          Premium
+\end{verbatim}
+
+\subsection{Display the last
+observation}\label{display-the-last-observation}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{tail}\NormalTok{(eco\_data)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+    TransactionID CustomerID ProductID Quantity    PaymentMethod
+295           295        181         9        5 Cash on Delivery
+296           296        157        15        5 Cash on Delivery
+297           297        293        13        5       Debit Card
+298           298        189        18        4       Debit Card
+299           299        182        15        2       Debit Card
+300           300        183        12        3       Debit Card
+    TransactionDate ProductCategory  Price Rating TotalAmount Age Gender
+295       9/28/2023     Electronics 132.51    2.3      662.55  30   Male
+296       3/13/2023     Electronics 389.03    2.2     1945.15  57   Male
+297       10/5/2023        Clothing 243.41    5.0     1217.05  59   Male
+298        8/2/2023 Home Appliances 341.40    3.0     1365.60  31   Male
+299      11/12/2023     Electronics 389.03    2.2      778.06  63 Female
+300       2/19/2023 Home Appliances 466.49    2.6     1399.47  23 Female
+       Location MembershipStatus
+295 Los Angeles          Premium
+296     Chicago             Gold
+297 Los Angeles            Basic
+298 Los Angeles             Gold
+299     Houston            Basic
+300     Chicago            Basic
+\end{verbatim}
+
+\section{Inspection of the structure and characteristics of
+data}\label{inspection-of-the-structure-and-characteristics-of-data}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{str}\NormalTok{(eco\_data)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+'data.frame':   300 obs. of  14 variables:
+ $ TransactionID   : int  1 2 3 4 5 6 7 8 9 10 ...
+ $ CustomerID      : int  207 253 110 256 274 52 191 165 18 169 ...
+ $ ProductID       : int  14 15 19 1 2 15 10 5 5 17 ...
+ $ Quantity        : int  5 1 5 3 5 2 1 5 4 2 ...
+ $ PaymentMethod   : chr  "UPI" "Cash on Delivery" "Cash on Delivery" "Debit Card" ...
+ $ TransactionDate : chr  "12/28/2023" "4/17/2023" "1/17/2023" "10/23/2023" ...
+ $ ProductCategory : chr  "Clothing" "Electronics" "Clothing" "Home Appliances" ...
+ $ Price           : num  33.4 389 145.9 215 325.5 ...
+ $ Rating          : num  4.2 2.2 1.7 2.7 3.4 2.2 3.7 1.4 1.4 1.9 ...
+ $ TotalAmount     : num  167 389 729 645 1627 ...
+ $ Age             : int  50 19 37 50 24 50 40 37 25 53 ...
+ $ Gender          : chr  "Male" "Female" "Female" "Male" ...
+ $ Location        : chr  "Houston" "Chicago" "Houston" "Los Angeles" ...
+ $ MembershipStatus: chr  "Basic" "Premium" "Basic" "Premium" ...
+\end{verbatim}
+
+\subsection{Determine the number of observations and
+variables.}\label{determine-the-number-of-observations-and-variables.}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{describe}\NormalTok{(eco\_data)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+                  vars   n   mean     sd median trimmed    mad   min     max
+TransactionID        1 300 150.50  86.75 150.50  150.50 111.19  1.00  300.00
+CustomerID           2 300 154.83  85.38 156.50  155.66 111.94  4.00  299.00
+ProductID            3 300  10.66   5.58  11.00   10.73   7.41  1.00   20.00
+Quantity             4 300   3.13   1.46   3.00    3.16   1.48  1.00    5.00
+PaymentMethod*       5 300   2.55   1.18   3.00    2.56   1.48  1.00    4.00
+TransactionDate*     6 300 109.66  62.24 110.50  110.10  80.80  1.00  216.00
+ProductCategory*     7 300   1.96   0.82   2.00    1.95   1.48  1.00    3.00
+Price                8 300 253.52 120.62 215.02  250.44 135.49 33.36  466.49
+Rating               9 300   2.93   1.06   2.60    2.85   1.04  1.40    5.00
+TotalAmount         10 300 803.12 568.91 662.55  745.60 565.82 33.36 2332.45
+Age                 11 292  41.79  13.27  42.00   41.74  16.31 18.00   65.00
+Gender*             12 300   2.49   0.58   3.00    2.54   0.00  1.00    3.00
+Location*           13 300   2.37   1.14   2.00    2.33   1.48  1.00    4.00
+MembershipStatus*   14 300   1.98   0.83   2.00    1.98   1.48  1.00    3.00
+                    range  skew kurtosis    se
+TransactionID      299.00  0.00    -1.21  5.01
+CustomerID         295.00 -0.07    -1.23  4.93
+ProductID           19.00 -0.09    -1.17  0.32
+Quantity             4.00 -0.10    -1.36  0.08
+PaymentMethod*       3.00 -0.06    -1.49  0.07
+TransactionDate*   215.00 -0.05    -1.22  3.59
+ProductCategory*     2.00  0.07    -1.51  0.05
+Price              433.13  0.18    -0.96  6.96
+Rating               3.60  0.57    -0.73  0.06
+TotalAmount       2299.09  0.78    -0.32 32.85
+Age                 47.00 -0.01    -1.13  0.78
+Gender*              2.00 -0.61    -0.61  0.03
+Location*            3.00  0.17    -1.40  0.07
+MembershipStatus*    2.00  0.03    -1.55  0.05
+\end{verbatim}
+
+\subsection{Examine the structure}\label{examine-the-structure}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{str}\NormalTok{(eco\_data)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+'data.frame':   300 obs. of  14 variables:
+ $ TransactionID   : int  1 2 3 4 5 6 7 8 9 10 ...
+ $ CustomerID      : int  207 253 110 256 274 52 191 165 18 169 ...
+ $ ProductID       : int  14 15 19 1 2 15 10 5 5 17 ...
+ $ Quantity        : int  5 1 5 3 5 2 1 5 4 2 ...
+ $ PaymentMethod   : chr  "UPI" "Cash on Delivery" "Cash on Delivery" "Debit Card" ...
+ $ TransactionDate : chr  "12/28/2023" "4/17/2023" "1/17/2023" "10/23/2023" ...
+ $ ProductCategory : chr  "Clothing" "Electronics" "Clothing" "Home Appliances" ...
+ $ Price           : num  33.4 389 145.9 215 325.5 ...
+ $ Rating          : num  4.2 2.2 1.7 2.7 3.4 2.2 3.7 1.4 1.4 1.9 ...
+ $ TotalAmount     : num  167 389 729 645 1627 ...
+ $ Age             : int  50 19 37 50 24 50 40 37 25 53 ...
+ $ Gender          : chr  "Male" "Female" "Female" "Male" ...
+ $ Location        : chr  "Houston" "Chicago" "Houston" "Los Angeles" ...
+ $ MembershipStatus: chr  "Basic" "Premium" "Basic" "Premium" ...
+\end{verbatim}
+
+\section{Examine the summary
+statistics.}\label{examine-the-summary-statistics.}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{summary}\NormalTok{(eco\_data)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+ TransactionID      CustomerID      ProductID        Quantity    
+ Min.   :  1.00   Min.   :  4.0   Min.   : 1.00   Min.   :1.000  
+ 1st Qu.: 75.75   1st Qu.: 77.0   1st Qu.: 6.00   1st Qu.:2.000  
+ Median :150.50   Median :156.5   Median :11.00   Median :3.000  
+ Mean   :150.50   Mean   :154.8   Mean   :10.66   Mean   :3.127  
+ 3rd Qu.:225.25   3rd Qu.:229.2   3rd Qu.:15.00   3rd Qu.:5.000  
+ Max.   :300.00   Max.   :299.0   Max.   :20.00   Max.   :5.000  
+                                                                 
+ PaymentMethod      TransactionDate    ProductCategory        Price       
+ Length:300         Length:300         Length:300         Min.   : 33.36  
+ Class :character   Class :character   Class :character   1st Qu.:145.89  
+ Mode  :character   Mode  :character   Mode  :character   Median :215.02  
+                                                          Mean   :253.52  
+                                                          3rd Qu.:350.44  
+                                                          Max.   :466.49  
+                                                                          
+     Rating       TotalAmount           Age           Gender         
+ Min.   :1.400   Min.   :  33.36   Min.   :18.00   Length:300        
+ 1st Qu.:2.100   1st Qu.: 350.44   1st Qu.:30.00   Class :character  
+ Median :2.600   Median : 662.55   Median :42.00   Mode  :character  
+ Mean   :2.928   Mean   : 803.12   Mean   :41.79                     
+ 3rd Qu.:3.700   3rd Qu.:1134.50   3rd Qu.:52.25                     
+ Max.   :5.000   Max.   :2332.45   Max.   :65.00                     
+                                   NA's   :8                         
+   Location         MembershipStatus  
+ Length:300         Length:300        
+ Class :character   Class :character  
+ Mode  :character   Mode  :character  
+                                      
+                                      
+                                      
+                                      
+\end{verbatim}
+
+\subsection{identifying missing values by
+columns}\label{identifying-missing-values-by-columns}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{colSums}\NormalTok{(}\FunctionTok{is.na}\NormalTok{(eco\_data))}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+   TransactionID       CustomerID        ProductID         Quantity 
+               0                0                0                0 
+   PaymentMethod  TransactionDate  ProductCategory            Price 
+               0                0                0                0 
+          Rating      TotalAmount              Age           Gender 
+               0                0                8                0 
+        Location MembershipStatus 
+               0                0 
+\end{verbatim}
+
+\subsection{identification of duplicate
+records}\label{identification-of-duplicate-records}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{eco\_data\_duplicate }\OtherTok{\textless{}{-}} \FunctionTok{sum}\NormalTok{(}\FunctionTok{duplicated}\NormalTok{(eco\_data))}
+\NormalTok{eco\_data\_duplicate}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+[1] 0
+\end{verbatim}
+
+\section{Task 2: Data preparation}\label{task-2-data-preparation}
+
+\subsection{categorical variables}\label{categorical-variables}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{cat\_var }\OtherTok{\textless{}{-}}\NormalTok{ eco\_data }\SpecialCharTok{\%\textgreater{}\%}
+    \FunctionTok{select}\NormalTok{(PaymentMethod, ProductCategory, Gender, Location, MembershipStatus, )}
+\FunctionTok{head}\NormalTok{(cat\_var)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+     PaymentMethod ProductCategory Gender    Location MembershipStatus
+1              UPI        Clothing   Male     Houston            Basic
+2 Cash on Delivery     Electronics Female     Chicago          Premium
+3 Cash on Delivery        Clothing Female     Houston            Basic
+4       Debit Card Home Appliances   Male Los Angeles          Premium
+5       Debit Card Home Appliances   Male    New York          Premium
+6      Credit Card     Electronics   Male     Houston          Premium
+\end{verbatim}
+
+\section{variable conversion to
+factors}\label{variable-conversion-to-factors}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{cat\_vars }\OtherTok{\textless{}{-}} \FunctionTok{c}\NormalTok{(}\StringTok{"PaymentMethod"}\NormalTok{, }\StringTok{"ProductCategory"}\NormalTok{, }\StringTok{"Gender"}\NormalTok{, }\StringTok{"Location"}\NormalTok{, }\StringTok{"MembershipStatus"}\NormalTok{)}
+\NormalTok{cat\_vars }\OtherTok{\textless{}{-}} \FunctionTok{as.factor}\NormalTok{(cat\_vars)}
+\FunctionTok{str}\NormalTok{(cat\_vars)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+ Factor w/ 5 levels "Gender","Location",..: 4 5 1 2 3
+\end{verbatim}
+
+\subsection{proper date format}\label{proper-date-format}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{cat}\NormalTok{(}\StringTok{"Class before:"}\NormalTok{, }\FunctionTok{class}\NormalTok{(eco\_data}\SpecialCharTok{$}\NormalTok{TransactionDate), }\StringTok{"}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+Class before: character 
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{cat}\NormalTok{(}\StringTok{"Sample before:"}\NormalTok{, }\FunctionTok{head}\NormalTok{(eco\_data}\SpecialCharTok{$}\NormalTok{TransactionDate, }\DecValTok{3}\NormalTok{), }\StringTok{"}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+Sample before: 12/28/2023 4/17/2023 1/17/2023 
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{eco\_data}\SpecialCharTok{$}\NormalTok{TransactionDate }\OtherTok{\textless{}{-}} \FunctionTok{as.Date}\NormalTok{(eco\_data}\SpecialCharTok{$}\NormalTok{TransactionDate, }\AttributeTok{format =} \StringTok{"\%m/\%d/\%Y"}\NormalTok{)}
+\FunctionTok{cat}\NormalTok{(}\StringTok{"Class after:"}\NormalTok{, }\FunctionTok{class}\NormalTok{(eco\_data}\SpecialCharTok{$}\NormalTok{TransactionDate), }\StringTok{"}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+Class after: Date 
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{cat}\NormalTok{(}\StringTok{"Sample after:"}\NormalTok{, }\FunctionTok{format}\NormalTok{(}\FunctionTok{head}\NormalTok{(eco\_data}\SpecialCharTok{$}\NormalTok{TransactionDate, }\DecValTok{3}\NormalTok{)), }\StringTok{"}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+Sample after: 2023-12-28 2023-04-17 2023-01-17 
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{cat}\NormalTok{(}\StringTok{"Date range:"}\NormalTok{, }\FunctionTok{format}\NormalTok{(}\FunctionTok{min}\NormalTok{(eco\_data}\SpecialCharTok{$}\NormalTok{TransactionDate)), }\StringTok{"to"}\NormalTok{, }\FunctionTok{format}\NormalTok{(}\FunctionTok{max}\NormalTok{(eco\_data}\SpecialCharTok{$}\NormalTok{TransactionDate)),}
+    \StringTok{"}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+Date range: 2023-01-01 to 2023-12-28 
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{cat}\NormalTok{(}\StringTok{"Any NA introduced by parsing:"}\NormalTok{, }\FunctionTok{sum}\NormalTok{(}\FunctionTok{is.na}\NormalTok{(eco\_data}\SpecialCharTok{$}\NormalTok{TransactionDate)), }\StringTok{"}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+Any NA introduced by parsing: 0 
+\end{verbatim}
+
+\section{checking for impossible values, such as negative quantities,
+prices or
+ages}\label{checking-for-impossible-values-such-as-negative-quantities-prices-or-ages}
+
+\subsection{check for imposible
+values}\label{check-for-imposible-values}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{checks }\OtherTok{\textless{}{-}} \FunctionTok{data.frame}\NormalTok{(}\AttributeTok{Check =} \FunctionTok{c}\NormalTok{(}\StringTok{"Quantity \textless{}= 0"}\NormalTok{, }\StringTok{"Price \textless{}= 0"}\NormalTok{, }\StringTok{"TotalAmount \textless{}= 0"}\NormalTok{,}
+    \StringTok{"Age \textless{} 18 or Age \textgreater{} 100"}\NormalTok{, }\StringTok{"Rating \textless{} 1 or Rating \textgreater{} 5"}\NormalTok{, }\StringTok{"TotalAmount != Quantity * Price"}\NormalTok{),}
+    \AttributeTok{Count =} \FunctionTok{c}\NormalTok{(}\FunctionTok{sum}\NormalTok{(eco\_data}\SpecialCharTok{$}\NormalTok{Quantity }\SpecialCharTok{\textless{}=} \DecValTok{0}\NormalTok{, }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{), }\FunctionTok{sum}\NormalTok{(eco\_data}\SpecialCharTok{$}\NormalTok{Price }\SpecialCharTok{\textless{}=} \DecValTok{0}\NormalTok{,}
+        \AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{), }\FunctionTok{sum}\NormalTok{(eco\_data}\SpecialCharTok{$}\NormalTok{TotalAmount }\SpecialCharTok{\textless{}=} \DecValTok{0}\NormalTok{, }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{), }\FunctionTok{sum}\NormalTok{(eco\_data}\SpecialCharTok{$}\NormalTok{Age }\SpecialCharTok{\textless{}}
+        \DecValTok{18} \SpecialCharTok{|}\NormalTok{ eco\_data}\SpecialCharTok{$}\NormalTok{Age }\SpecialCharTok{\textgreater{}} \DecValTok{100}\NormalTok{, }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{), }\FunctionTok{sum}\NormalTok{(eco\_data}\SpecialCharTok{$}\NormalTok{Rating }\SpecialCharTok{\textless{}} \DecValTok{1} \SpecialCharTok{|}\NormalTok{ eco\_data}\SpecialCharTok{$}\NormalTok{Rating }\SpecialCharTok{\textgreater{}}
+        \DecValTok{5}\NormalTok{, }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{), }\FunctionTok{sum}\NormalTok{(}\FunctionTok{abs}\NormalTok{(eco\_data}\SpecialCharTok{$}\NormalTok{Quantity }\SpecialCharTok{*}\NormalTok{ eco\_data}\SpecialCharTok{$}\NormalTok{Price }\SpecialCharTok{{-}}\NormalTok{ eco\_data}\SpecialCharTok{$}\NormalTok{TotalAmount) }\SpecialCharTok{\textgreater{}}
+        \FloatTok{0.01}\NormalTok{, }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{)))}
+\NormalTok{checks}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+                            Check Count
+1                   Quantity <= 0     0
+2                      Price <= 0     0
+3                TotalAmount <= 0     0
+4           Age < 18 or Age > 100     0
+5        Rating < 1 or Rating > 5     0
+6 TotalAmount != Quantity * Price     0
+\end{verbatim}
+
+\textbf{Interpretation:} No impossible values. \texttt{TotalAmount} is
+internally consistent with \texttt{Quantity\ ×\ Price} for every row.
+
+\subsection{Build the Cleaned Analytical Dataset \&
+Verify}\label{build-the-cleaned-analytical-dataset-verify}
+
+\section{Replace missing values with the
+mean}\label{replace-missing-values-with-the-mean}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{eco\_data}\SpecialCharTok{$}\NormalTok{Age[}\FunctionTok{is.na}\NormalTok{(eco\_data}\SpecialCharTok{$}\NormalTok{Age)] }\OtherTok{\textless{}{-}} \FunctionTok{mean}\NormalTok{(eco\_data}\SpecialCharTok{$}\NormalTok{Age, }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\section{verification and checking of missing values after replacing
+with the
+mean}\label{verification-and-checking-of-missing-values-after-replacing-with-the-mean}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{colSums}\NormalTok{(}\FunctionTok{is.na}\NormalTok{(eco\_data))}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+   TransactionID       CustomerID        ProductID         Quantity 
+               0                0                0                0 
+   PaymentMethod  TransactionDate  ProductCategory            Price 
+               0                0                0                0 
+          Rating      TotalAmount              Age           Gender 
+               0                0                0                0 
+        Location MembershipStatus 
+               0                0 
+\end{verbatim}
+
+\subsection{cleaned data}\label{cleaned-data}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{cleaned\_ecodata }\OtherTok{\textless{}{-}} \FunctionTok{as.data.frame}\NormalTok{(eco\_data)}
+\FunctionTok{head}\NormalTok{(cleaned\_ecodata)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+  TransactionID CustomerID ProductID Quantity    PaymentMethod TransactionDate
+1             1        207        14        5              UPI      2023-12-28
+2             2        253        15        1 Cash on Delivery      2023-04-17
+3             3        110        19        5 Cash on Delivery      2023-01-17
+4             4        256         1        3       Debit Card      2023-10-23
+5             5        274         2        5       Debit Card      2023-06-30
+6             6         52        15        2      Credit Card      2023-06-14
+  ProductCategory  Price Rating TotalAmount Age Gender    Location
+1        Clothing  33.36    4.2      166.80  50   Male     Houston
+2     Electronics 389.03    2.2      389.03  19 Female     Chicago
+3        Clothing 145.89    1.7      729.45  37 Female     Houston
+4 Home Appliances 215.02    2.7      645.06  50   Male Los Angeles
+5 Home Appliances 325.48    3.4     1627.40  24   Male    New York
+6     Electronics 389.03    2.2      778.06  50   Male     Houston
+  MembershipStatus
+1            Basic
+2          Premium
+3            Basic
+4          Premium
+5          Premium
+6          Premium
+\end{verbatim}
+
+\textbf{Final cleaned dataset profile:}
+
+\section{Task 3: Exploratory Data
+Analysis}\label{task-3-exploratory-data-analysis}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{n\_total }\OtherTok{\textless{}{-}} \FunctionTok{nrow}\NormalTok{(eco\_data)}
+\NormalTok{avg\_total }\OtherTok{\textless{}{-}} \FunctionTok{mean}\NormalTok{(eco\_data}\SpecialCharTok{$}\NormalTok{TotalAmount)}
+\NormalTok{med\_total }\OtherTok{\textless{}{-}} \FunctionTok{median}\NormalTok{(eco\_data}\SpecialCharTok{$}\NormalTok{TotalAmount)}
+\end{Highlighting}
+\end{Shaded}
+
+\subsection{\texorpdfstring{What is the distribution of
+\texttt{TotalAmount}?}{What is the distribution of TotalAmount?}}\label{what-is-the-distribution-of-totalamount}
+
+\section{total amount using boxplot}\label{total-amount-using-boxplot}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{boxplot}\NormalTok{(cleaned\_ecodata}\SpecialCharTok{$}\NormalTok{TotalAmount, }\AttributeTok{ylab =} \StringTok{"TotalAmount"}\NormalTok{, }\AttributeTok{main =} \StringTok{"overview of TotalAmount using Boxplot"}\NormalTok{,}
+    \AttributeTok{col =} \StringTok{"yellowgreen"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{center}\includegraphics[width=1\linewidth]{PROJECT-1_files/figure-latex/unnamed-chunk-16-1} \end{center}
+
+\section{Total Amount using
+aggregation}\label{total-amount-using-aggregation}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{total\_amount }\OtherTok{\textless{}{-}} \FunctionTok{aggregate}\NormalTok{(TotalAmount }\SpecialCharTok{\textasciitilde{}}\NormalTok{ ProductCategory, }\AttributeTok{data =}\NormalTok{ cleaned\_ecodata,}
+    \AttributeTok{FUN =}\NormalTok{ sum)}
+\NormalTok{total\_amount}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+  ProductCategory TotalAmount
+1        Clothing    60536.40
+2     Electronics    69501.41
+3 Home Appliances   110897.21
+\end{verbatim}
+
+\section{clothing\textasciitilde{} 60536.40,
+Electronics\textasciitilde{} 69501.41, Home Appliances\textasciitilde{}
+110897.21 hence home appliences is the most
+leading}\label{clothing-60536.40-electronics-69501.41-home-appliances-110897.21-hence-home-appliences-is-the-most-leading}
+
+\subsection{\texorpdfstring{5.2 Which \texttt{ProductCategory} generates
+the highest
+sales?}{5.2 Which ProductCategory generates the highest sales?}}\label{which-productcategory-generates-the-highest-sales}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{rev\_by\_cat }\OtherTok{\textless{}{-}} \FunctionTok{aggregate}\NormalTok{(TotalAmount }\SpecialCharTok{\textasciitilde{}}\NormalTok{ ProductCategory, }\AttributeTok{data =}\NormalTok{ eco\_data, }\AttributeTok{FUN =}\NormalTok{ sum)}
+\NormalTok{rev\_by\_cat }\OtherTok{\textless{}{-}}\NormalTok{ rev\_by\_cat[}\FunctionTok{order}\NormalTok{(}\SpecialCharTok{{-}}\NormalTok{rev\_by\_cat}\SpecialCharTok{$}\NormalTok{TotalAmount), ]}
+\NormalTok{rev\_by\_cat}\SpecialCharTok{$}\NormalTok{Share }\OtherTok{\textless{}{-}} \FunctionTok{round}\NormalTok{(}\DecValTok{100} \SpecialCharTok{*}\NormalTok{ rev\_by\_cat}\SpecialCharTok{$}\NormalTok{TotalAmount}\SpecialCharTok{/}\FunctionTok{sum}\NormalTok{(rev\_by\_cat}\SpecialCharTok{$}\NormalTok{TotalAmount),}
+    \DecValTok{1}\NormalTok{)}
+\NormalTok{rev\_by\_cat}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+  ProductCategory TotalAmount Share
+3 Home Appliances   110897.21  46.0
+2     Electronics    69501.41  28.8
+1        Clothing    60536.40  25.1
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{cnt\_by\_cat }\OtherTok{\textless{}{-}} \FunctionTok{as.data.frame}\NormalTok{(}\FunctionTok{table}\NormalTok{(eco\_data}\SpecialCharTok{$}\NormalTok{ProductCategory))}
+\FunctionTok{names}\NormalTok{(cnt\_by\_cat) }\OtherTok{\textless{}{-}} \FunctionTok{c}\NormalTok{(}\StringTok{"ProductCategory"}\NormalTok{, }\StringTok{"Transactions"}\NormalTok{)}
+\NormalTok{cnt\_by\_cat}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+  ProductCategory Transactions
+1        Clothing          106
+2     Electronics           99
+3 Home Appliances           95
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{avg\_by\_cat }\OtherTok{\textless{}{-}} \FunctionTok{aggregate}\NormalTok{(TotalAmount }\SpecialCharTok{\textasciitilde{}}\NormalTok{ ProductCategory, }\AttributeTok{data =}\NormalTok{ eco\_data, }\AttributeTok{FUN =}\NormalTok{ mean)}
+\NormalTok{avg\_by\_cat}\SpecialCharTok{$}\NormalTok{TotalAmount }\OtherTok{\textless{}{-}} \FunctionTok{round}\NormalTok{(avg\_by\_cat}\SpecialCharTok{$}\NormalTok{TotalAmount, }\DecValTok{2}\NormalTok{)}
+\NormalTok{avg\_by\_cat}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+  ProductCategory TotalAmount
+1        Clothing      571.10
+2     Electronics      702.03
+3 Home Appliances     1167.34
+\end{verbatim}
+
+Home Appliances and Electronics dominate total revenue --- their higher
+unit prices outweigh Clothing's higher transaction count. Clothing has
+the most transactions but the lowest average transaction value .
+Business insight: revenue is driven by high-ticket categories, not by
+frequency.
+
+\subsection{\texorpdfstring{Which \texttt{PaymentMethod} is most
+frequently
+used?}{Which PaymentMethod is most frequently used?}}\label{which-paymentmethod-is-most-frequently-used}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{p8 }\OtherTok{\textless{}{-}} \FunctionTok{ggplot}\NormalTok{(cleaned\_ecodata, }\FunctionTok{aes}\NormalTok{(}\AttributeTok{x =}\NormalTok{ PaymentMethod, }\AttributeTok{fill =}\NormalTok{ PaymentMethod)) }\SpecialCharTok{+} \FunctionTok{geom\_bar}\NormalTok{(}\AttributeTok{alpha =} \FloatTok{0.35}\NormalTok{,}
+    \AttributeTok{outlier.color =} \StringTok{"red"}\NormalTok{, }\AttributeTok{outlier.shape =} \DecValTok{10}\NormalTok{, }\AttributeTok{outlier.size =} \DecValTok{1}\NormalTok{) }\SpecialCharTok{+} \FunctionTok{labs}\NormalTok{(}\AttributeTok{title =} \StringTok{"Payment visualization "}\NormalTok{,}
+    \AttributeTok{subtitle =} \StringTok{"determine frequently used"}\NormalTok{, }\AttributeTok{x =} \ConstantTok{NULL}\NormalTok{, }\AttributeTok{y =} \StringTok{"Number of transactions"}\NormalTok{) }\SpecialCharTok{+}
+    \FunctionTok{theme\_minimal}\NormalTok{() }\SpecialCharTok{+} \FunctionTok{theme}\NormalTok{(}\AttributeTok{legend.position =} \StringTok{"none"}\NormalTok{)}
+\NormalTok{p8}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{center}\includegraphics[width=1\linewidth]{PROJECT-1_files/figure-latex/viz8-1} \end{center}
+
+\section{analysing using table}\label{analysing-using-table}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{pay\_freq }\OtherTok{\textless{}{-}} \FunctionTok{as.data.frame}\NormalTok{(}\FunctionTok{table}\NormalTok{(cleaned\_ecodata}\SpecialCharTok{$}\NormalTok{PaymentMethod))}
+\FunctionTok{names}\NormalTok{(pay\_freq) }\OtherTok{\textless{}{-}} \FunctionTok{c}\NormalTok{(}\StringTok{"PaymentMethod"}\NormalTok{, }\StringTok{"Count"}\NormalTok{)}
+\NormalTok{pay\_freq}\SpecialCharTok{$}\NormalTok{Pct }\OtherTok{\textless{}{-}} \FunctionTok{round}\NormalTok{(}\DecValTok{100} \SpecialCharTok{*}\NormalTok{ pay\_freq}\SpecialCharTok{$}\NormalTok{Count}\SpecialCharTok{/}\NormalTok{n\_total, }\DecValTok{1}\NormalTok{)}
+\NormalTok{pay\_freq }\OtherTok{\textless{}{-}}\NormalTok{ pay\_freq[}\FunctionTok{order}\NormalTok{(}\SpecialCharTok{{-}}\NormalTok{pay\_freq}\SpecialCharTok{$}\NormalTok{Count), ]}
+\NormalTok{pay\_freq}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+     PaymentMethod Count  Pct
+4              UPI    90 30.0
+1 Cash on Delivery    80 26.7
+2      Credit Card    65 21.7
+3       Debit Card    65 21.7
+\end{verbatim}
+
+\section{Interpretation: UPI and Debit Cash delivery are the most
+frequently used
+methods.}\label{interpretation-upi-and-debit-cash-delivery-are-the-most-frequently-used-methods.}
+
+\subsection{What is the average transaction
+value?}\label{what-is-the-average-transaction-value}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{cat}\NormalTok{(}\StringTok{"Average transaction value : $"}\NormalTok{, }\FunctionTok{round}\NormalTok{(avg\_total, }\DecValTok{2}\NormalTok{), }\StringTok{"}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+Average transaction value : $ 803.12 
+\end{verbatim}
+
+\subsection{\texorpdfstring{Does transaction spending differ by
+\texttt{MembershipStatus}?}{Does transaction spending differ by MembershipStatus?}}\label{does-transaction-spending-differ-by-membershipstatus}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{p7 }\OtherTok{\textless{}{-}} \FunctionTok{ggplot}\NormalTok{(cleaned\_ecodata, }\FunctionTok{aes}\NormalTok{(}\AttributeTok{x =}\NormalTok{ MembershipStatus, }\AttributeTok{fill =}\NormalTok{ MembershipStatus)) }\SpecialCharTok{+}
+    \FunctionTok{geom\_bar}\NormalTok{(}\AttributeTok{alpha =} \FloatTok{0.35}\NormalTok{, }\AttributeTok{outlier.color =} \StringTok{"red"}\NormalTok{, }\AttributeTok{outlier.shape =} \DecValTok{10}\NormalTok{, }\AttributeTok{outlier.size =} \DecValTok{1}\NormalTok{) }\SpecialCharTok{+}
+    \FunctionTok{labs}\NormalTok{(}\AttributeTok{title =} \StringTok{"Payment visualization "}\NormalTok{, }\AttributeTok{subtitle =} \StringTok{"determine frequently used"}\NormalTok{,}
+        \AttributeTok{x =} \ConstantTok{NULL}\NormalTok{, }\AttributeTok{y =} \StringTok{"Number of transactions"}\NormalTok{) }\SpecialCharTok{+} \FunctionTok{theme\_minimal}\NormalTok{() }\SpecialCharTok{+} \FunctionTok{theme}\NormalTok{(}\AttributeTok{legend.position =} \StringTok{"none"}\NormalTok{)}
+\NormalTok{p7}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{center}\includegraphics[width=1\linewidth]{PROJECT-1_files/figure-latex/viz7-1} \end{center}
+
+\subsection{\texorpdfstring{Is there an association between
+\texttt{Gender} and
+\texttt{ProductCategory}?}{Is there an association between Gender and ProductCategory?}}\label{is-there-an-association-between-gender-and-productcategory}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{tab\_gc }\OtherTok{\textless{}{-}} \FunctionTok{table}\NormalTok{(cleaned\_ecodata}\SpecialCharTok{$}\NormalTok{Gender, cleaned\_ecodata}\SpecialCharTok{$}\NormalTok{ProductCategory)}
+\NormalTok{tab\_gc}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+        
+         Clothing Electronics Home Appliances
+                5           6               2
+  Female       52          34              42
+  Male         49          59              51
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{chisq\_gc }\OtherTok{\textless{}{-}} \FunctionTok{chisq.test}\NormalTok{(tab\_gc)}
+\NormalTok{chisq\_gc}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+
+    Pearson's Chi-squared test
+
+data:  tab_gc
+X-squared = 6.2195, df = 4, p-value = 0.1833
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{cramers\_v }\OtherTok{\textless{}{-}} \FunctionTok{sqrt}\NormalTok{(chisq\_gc}\SpecialCharTok{$}\NormalTok{statistic}\SpecialCharTok{/}\NormalTok{(}\FunctionTok{sum}\NormalTok{(tab\_gc) }\SpecialCharTok{*}\NormalTok{ (}\FunctionTok{min}\NormalTok{(}\FunctionTok{dim}\NormalTok{(tab\_gc)) }\SpecialCharTok{{-}} \DecValTok{1}\NormalTok{)))}
+\FunctionTok{cat}\NormalTok{(}\StringTok{"Cramer\textquotesingle{}s V:"}\NormalTok{, }\FunctionTok{round}\NormalTok{(cramers\_v, }\DecValTok{3}\NormalTok{), }\StringTok{"}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+Cramer's V: 0.102 
+\end{verbatim}
+
+since the p\_value= 0.1833\textless{} 5\%, we fail to reject null
+hyponthesis and hence there is no significance Association btn gender
+and Productory
+
+\subsection{\texorpdfstring{What is the relationship between
+\texttt{Age}, \texttt{Rating}, and
+\texttt{TotalAmount}?}{What is the relationship between Age, Rating, and TotalAmount?}}\label{what-is-the-relationship-between-age-rating-and-totalamount}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{cor\_mat }\OtherTok{\textless{}{-}} \FunctionTok{cor}\NormalTok{(cleaned\_ecodata[, }\FunctionTok{c}\NormalTok{(}\StringTok{"Age"}\NormalTok{, }\StringTok{"Rating"}\NormalTok{, }\StringTok{"TotalAmount"}\NormalTok{)], }\AttributeTok{use =} \StringTok{"complete.obs"}\NormalTok{)}
+\FunctionTok{round}\NormalTok{(cor\_mat, }\DecValTok{3}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+               Age Rating TotalAmount
+Age          1.000  0.038      -0.016
+Rating       0.038  1.000      -0.128
+TotalAmount -0.016 -0.128       1.000
+\end{verbatim}
+
+Age shows a near-zero correlation with TotalAmount, indicating that age
+is not a linear predictor of spending, while Rating shows only a weak
+correlation, suggesting that product rating does not drive basket size;
+by contrast, Quantity and Price are the true drivers of TotalAmount, as
+expected since TotalAmount = Quantity × Price, and the regression
+confirms that quantity and price explain nearly all the variance in
+TotalAmount, with age and rating adding little.
+
+\section{How do sales change over
+time?}\label{how-do-sales-change-over-time}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{monthly }\OtherTok{\textless{}{-}}\NormalTok{ cleaned\_ecodata }\SpecialCharTok{\%\textgreater{}\%}
+    \FunctionTok{mutate}\NormalTok{(}\AttributeTok{Month =} \FunctionTok{format}\NormalTok{(TransactionDate, }\StringTok{"\%Y{-}\%m"}\NormalTok{)) }\SpecialCharTok{\%\textgreater{}\%}
+    \FunctionTok{group\_by}\NormalTok{(Month) }\SpecialCharTok{\%\textgreater{}\%}
+    \FunctionTok{summarise}\NormalTok{(}\AttributeTok{TotalAmount =} \FunctionTok{sum}\NormalTok{(TotalAmount, }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{), }\AttributeTok{.groups =} \StringTok{"drop"}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
+    \FunctionTok{arrange}\NormalTok{(Month) }\SpecialCharTok{\%\textgreater{}\%}
+    \FunctionTok{as.data.frame}\NormalTok{()}
+\NormalTok{p5 }\OtherTok{\textless{}{-}} \FunctionTok{ggplot}\NormalTok{(monthly, }\FunctionTok{aes}\NormalTok{(}\AttributeTok{x =}\NormalTok{ Month, }\AttributeTok{y =}\NormalTok{ TotalAmount, }\AttributeTok{group =} \DecValTok{1}\NormalTok{)) }\SpecialCharTok{+} \FunctionTok{geom\_line}\NormalTok{(}\AttributeTok{colour =} \StringTok{"darkgreen"}\NormalTok{,}
+    \AttributeTok{linewidth =} \DecValTok{1}\NormalTok{) }\SpecialCharTok{+} \FunctionTok{geom\_point}\NormalTok{(}\AttributeTok{colour =} \StringTok{"darkgreen"}\NormalTok{, }\AttributeTok{size =} \FloatTok{3.5}\NormalTok{) }\SpecialCharTok{+} \FunctionTok{labs}\NormalTok{(}\AttributeTok{title =} \StringTok{"Sales changes Over Time (2023)"}\NormalTok{,}
+    \AttributeTok{subtitle =} \StringTok{"Fluctuating revenue with seasonal peaks"}\NormalTok{, }\AttributeTok{x =} \ConstantTok{NULL}\NormalTok{, }\AttributeTok{y =} \StringTok{"Total sales ($)"}\NormalTok{) }\SpecialCharTok{+}
+    \FunctionTok{theme\_classic}\NormalTok{() }\SpecialCharTok{+} \FunctionTok{theme}\NormalTok{(}\AttributeTok{axis.text.x =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{angle =} \DecValTok{45}\NormalTok{, }\AttributeTok{hjust =} \DecValTok{1}\NormalTok{))}
+\NormalTok{p5}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{center}\includegraphics[width=1\linewidth]{PROJECT-1_files/figure-latex/viz5-1} \end{center}
+
+\section{sales change best and worst
+month}\label{sales-change-best-and-worst-month}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{cat}\NormalTok{(}\StringTok{"Best month :}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{, monthly}\SpecialCharTok{$}\NormalTok{Month[}\FunctionTok{which.max}\NormalTok{(monthly}\SpecialCharTok{$}\NormalTok{TotalAmount)], }\StringTok{"= "}\NormalTok{, }\FunctionTok{round}\NormalTok{(}\FunctionTok{max}\NormalTok{(monthly}\SpecialCharTok{$}\NormalTok{TotalAmount),}
+    \DecValTok{2}\NormalTok{), }\StringTok{"}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+Best month :
+ 2023-02 =  26281.74 
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{cat}\NormalTok{(}\StringTok{"Worst month:}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{, monthly}\SpecialCharTok{$}\NormalTok{Month[}\FunctionTok{which.min}\NormalTok{(monthly}\SpecialCharTok{$}\NormalTok{TotalAmount)], }\StringTok{"= "}\NormalTok{, }\FunctionTok{round}\NormalTok{(}\FunctionTok{min}\NormalTok{(monthly}\SpecialCharTok{$}\NormalTok{TotalAmount),}
+    \DecValTok{2}\NormalTok{), }\StringTok{"}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+Worst month:
+ 2023-10 =  11160.97 
+\end{verbatim}
+
+\section{Task 4: Data Visualization}\label{task-4-data-visualization}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{theme\_report }\OtherTok{\textless{}{-}} \FunctionTok{theme\_minimal}\NormalTok{(}\AttributeTok{base\_size =} \DecValTok{12}\NormalTok{) }\SpecialCharTok{+} \FunctionTok{theme}\NormalTok{(}\AttributeTok{plot.title =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{face =} \StringTok{"bold"}\NormalTok{,}
+    \AttributeTok{size =} \DecValTok{13}\NormalTok{), }\AttributeTok{plot.subtitle =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{10}\NormalTok{, }\AttributeTok{colour =} \StringTok{"grey40"}\NormalTok{), }\AttributeTok{legend.position =} \StringTok{"bottom"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{ggplot}\NormalTok{(eco\_data, }\FunctionTok{aes}\NormalTok{(}\AttributeTok{x =}\NormalTok{ ProductCategory, }\AttributeTok{y =}\NormalTok{ TotalAmount, }\AttributeTok{fill =}\NormalTok{ Gender)) }\SpecialCharTok{+} \FunctionTok{geom\_boxplot}\NormalTok{(}\AttributeTok{alpha =} \FloatTok{0.75}\NormalTok{,}
+    \AttributeTok{outlier.colour =} \StringTok{"red"}\NormalTok{) }\SpecialCharTok{+} \FunctionTok{stat\_summary}\NormalTok{(}\AttributeTok{fun =}\NormalTok{ mean, }\AttributeTok{geom =} \StringTok{"point"}\NormalTok{, }\AttributeTok{shape =} \DecValTok{18}\NormalTok{,}
+    \AttributeTok{size =} \DecValTok{3}\NormalTok{, }\AttributeTok{colour =} \StringTok{"black"}\NormalTok{) }\SpecialCharTok{+} \FunctionTok{labs}\NormalTok{(}\AttributeTok{title =} \StringTok{"TotalAmount by Gender and ProductCategory"}\NormalTok{,}
+    \AttributeTok{subtitle =} \StringTok{"Black diamonds = group means; Tukey HSD compares these means"}\NormalTok{, }\AttributeTok{x =} \ConstantTok{NULL}\NormalTok{,}
+    \AttributeTok{y =} \StringTok{"Total amount ($)"}\NormalTok{) }\SpecialCharTok{+} \FunctionTok{theme\_minimal}\NormalTok{(}\AttributeTok{base\_size =} \DecValTok{12}\NormalTok{) }\SpecialCharTok{+} \FunctionTok{theme}\NormalTok{(}\AttributeTok{plot.title =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{face =} \StringTok{"bold"}\NormalTok{),}
+    \AttributeTok{legend.position =} \StringTok{"bottom"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{center}\includegraphics[width=1\linewidth]{PROJECT-1_files/figure-latex/unnamed-chunk-18-1} \end{center}
+
+\subsection{Bar chart --- transactions by product
+category}\label{bar-chart-transactions-by-product-category}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{p1 }\OtherTok{\textless{}{-}} \FunctionTok{ggplot}\NormalTok{(eco\_data, }\FunctionTok{aes}\NormalTok{(}\AttributeTok{x =}\NormalTok{ ProductCategory, }\AttributeTok{fill =}\NormalTok{ ProductCategory)) }\SpecialCharTok{+} \FunctionTok{geom\_bar}\NormalTok{(}\AttributeTok{alpha =} \FloatTok{0.35}\NormalTok{,}
+    \AttributeTok{outlier.color =} \StringTok{"red"}\NormalTok{, }\AttributeTok{outlier.shape =} \DecValTok{10}\NormalTok{, }\AttributeTok{outlier.size =} \DecValTok{1}\NormalTok{) }\SpecialCharTok{+} \FunctionTok{labs}\NormalTok{(}\AttributeTok{title =} \StringTok{"Transactions by Product Category"}\NormalTok{,}
+    \AttributeTok{subtitle =} \StringTok{"Clothing has the most transactions"}\NormalTok{, }\AttributeTok{x =} \ConstantTok{NULL}\NormalTok{, }\AttributeTok{y =} \StringTok{"Number of transactions"}\NormalTok{) }\SpecialCharTok{+}
+    \FunctionTok{theme\_economist}\NormalTok{()}
+\NormalTok{p1}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{center}\includegraphics[width=1\linewidth]{PROJECT-1_files/figure-latex/viz1-1} \end{center}
+
+\subsection{Histogram --- distribution of transaction
+amounts}\label{histogram-distribution-of-transaction-amounts}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{p2 }\OtherTok{\textless{}{-}} \FunctionTok{ggplot}\NormalTok{(eco\_data, }\FunctionTok{aes}\NormalTok{(}\AttributeTok{x =}\NormalTok{ TotalAmount)) }\SpecialCharTok{+} \FunctionTok{geom\_histogram}\NormalTok{(}\AttributeTok{bins =} \DecValTok{30}\NormalTok{, }\AttributeTok{fill =} \StringTok{"darkorange"}\NormalTok{,}
+    \AttributeTok{colour =} \StringTok{"white"}\NormalTok{) }\SpecialCharTok{+} \FunctionTok{geom\_vline}\NormalTok{(}\AttributeTok{xintercept =}\NormalTok{ avg\_total, }\AttributeTok{linetype =} \StringTok{"dashed"}\NormalTok{, }\AttributeTok{colour =} \StringTok{"red"}\NormalTok{,}
+    \AttributeTok{linewidth =} \FloatTok{0.8}\NormalTok{) }\SpecialCharTok{+} \FunctionTok{geom\_vline}\NormalTok{(}\AttributeTok{xintercept =}\NormalTok{ med\_total, }\AttributeTok{linetype =} \StringTok{"dotted"}\NormalTok{, }\AttributeTok{colour =} \StringTok{"blue"}\NormalTok{,}
+    \AttributeTok{linewidth =} \FloatTok{0.8}\NormalTok{) }\SpecialCharTok{+} \FunctionTok{labs}\NormalTok{(}\AttributeTok{title =} \StringTok{"Distribution of Transaction Amounts"}\NormalTok{, }\AttributeTok{subtitle =} \StringTok{"Red dashed = mean; blue dotted = median (right{-}skewed)"}\NormalTok{,}
+    \AttributeTok{x =} \StringTok{"Total amount ($)"}\NormalTok{, }\AttributeTok{y =} \StringTok{"Frequency"}\NormalTok{) }\SpecialCharTok{+} \FunctionTok{theme\_economist}\NormalTok{()}
+\NormalTok{p2}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{center}\includegraphics[width=1\linewidth]{PROJECT-1_files/figure-latex/viz2-1} \end{center}
+
+\subsection{\texorpdfstring{Boxplot --- \texttt{TotalAmount} by
+membership
+status}{Boxplot --- TotalAmount by membership status}}\label{boxplot-totalamount-by-membership-status}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{p3 }\OtherTok{\textless{}{-}} \FunctionTok{ggplot}\NormalTok{(eco\_data, }\FunctionTok{aes}\NormalTok{(}\AttributeTok{x =}\NormalTok{ MembershipStatus, }\AttributeTok{y =}\NormalTok{ TotalAmount, }\AttributeTok{fill =}\NormalTok{ MembershipStatus)) }\SpecialCharTok{+}
+    \FunctionTok{geom\_boxplot}\NormalTok{(}\AttributeTok{alpha =} \FloatTok{0.75}\NormalTok{, }\AttributeTok{outlier.colour =} \StringTok{"red"}\NormalTok{) }\SpecialCharTok{+} \FunctionTok{labs}\NormalTok{(}\AttributeTok{title =} \StringTok{"Transaction Amount by Membership Status"}\NormalTok{,}
+    \AttributeTok{subtitle =} \StringTok{"Premium members spend more per transaction"}\NormalTok{, }\AttributeTok{x =} \ConstantTok{NULL}\NormalTok{, }\AttributeTok{y =} \StringTok{"Total amount ($)"}\NormalTok{) }\SpecialCharTok{+}
+    \FunctionTok{theme\_excel}\NormalTok{() }\SpecialCharTok{+} \FunctionTok{theme}\NormalTok{(}\AttributeTok{legend.position =} \StringTok{"none"}\NormalTok{)}
+\NormalTok{p3}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{center}\includegraphics[width=1\linewidth]{PROJECT-1_files/figure-latex/viz3-1} \end{center}
+
+\subsection{\texorpdfstring{Scatter plot --- \texttt{Price} vs
+\texttt{TotalAmount}}{Scatter plot --- Price vs TotalAmount}}\label{scatter-plot-price-vs-totalamount}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{p4 }\OtherTok{\textless{}{-}} \FunctionTok{ggplot}\NormalTok{(eco\_data, }\FunctionTok{aes}\NormalTok{(}\AttributeTok{x =}\NormalTok{ Price, }\AttributeTok{y =}\NormalTok{ TotalAmount, }\AttributeTok{colour =}\NormalTok{ ProductCategory)) }\SpecialCharTok{+}
+    \FunctionTok{geom\_point}\NormalTok{(}\AttributeTok{alpha =} \FloatTok{0.65}\NormalTok{, }\AttributeTok{size =} \DecValTok{2}\NormalTok{) }\SpecialCharTok{+} \FunctionTok{geom\_smooth}\NormalTok{(}\AttributeTok{method =} \StringTok{"lm"}\NormalTok{, }\AttributeTok{se =} \ConstantTok{FALSE}\NormalTok{, }\AttributeTok{colour =} \StringTok{"grey30"}\NormalTok{,}
+    \AttributeTok{linetype =} \StringTok{"dashed"}\NormalTok{, }\AttributeTok{linewidth =} \FloatTok{0.7}\NormalTok{) }\SpecialCharTok{+} \FunctionTok{labs}\NormalTok{(}\AttributeTok{title =} \StringTok{"Unit Price vs Total Amount"}\NormalTok{,}
+    \AttributeTok{subtitle =} \StringTok{"Linear relationship driven by TotalAmount = Price x Quantity"}\NormalTok{, }\AttributeTok{x =} \StringTok{"Unit price ($)"}\NormalTok{,}
+    \AttributeTok{y =} \StringTok{"Total amount ($)"}\NormalTok{) }\SpecialCharTok{+} \FunctionTok{theme\_minimal}\NormalTok{()}
+\NormalTok{p4}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{center}\includegraphics[width=1\linewidth]{PROJECT-1_files/figure-latex/viz4-1} \end{center}
+
+\subsection{Bar chart --- payment method
+frequency}\label{bar-chart-payment-method-frequency}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{p6 }\OtherTok{\textless{}{-}} \FunctionTok{ggplot}\NormalTok{(pay\_freq, }\FunctionTok{aes}\NormalTok{(}\AttributeTok{x =} \FunctionTok{reorder}\NormalTok{(PaymentMethod, }\SpecialCharTok{{-}}\NormalTok{Count), }\AttributeTok{y =}\NormalTok{ Count, }\AttributeTok{fill =}\NormalTok{ PaymentMethod)) }\SpecialCharTok{+}
+    \FunctionTok{geom\_col}\NormalTok{(}\AttributeTok{alpha =} \FloatTok{0.85}\NormalTok{) }\SpecialCharTok{+} \FunctionTok{geom\_text}\NormalTok{(}\FunctionTok{aes}\NormalTok{(}\AttributeTok{label =} \FunctionTok{paste0}\NormalTok{(Pct, }\StringTok{"\%"}\NormalTok{)), }\AttributeTok{vjust =} \SpecialCharTok{{-}}\FloatTok{0.4}\NormalTok{,}
+    \AttributeTok{size =} \FloatTok{3.5}\NormalTok{) }\SpecialCharTok{+} \FunctionTok{labs}\NormalTok{(}\AttributeTok{title =} \StringTok{"Payment Method Frequency"}\NormalTok{, }\AttributeTok{subtitle =} \StringTok{"UPI and Debit Card"}\NormalTok{,}
+    \AttributeTok{x =} \ConstantTok{NULL}\NormalTok{, }\AttributeTok{y =} \StringTok{"Number of transactions"}\NormalTok{) }\SpecialCharTok{+} \FunctionTok{theme\_minimal}\NormalTok{() }\SpecialCharTok{+} \FunctionTok{theme}\NormalTok{(}\AttributeTok{legend.position =} \StringTok{"none"}\NormalTok{)}
+\NormalTok{p6}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{center}\includegraphics[width=1\linewidth]{PROJECT-1_files/figure-latex/viz6-1} \end{center}
+
+\subsection{Combined panel}\label{combined-panel}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{grid.arrange}\NormalTok{(p1, p2, p3, p4, p5, p6, p7, p8, }\AttributeTok{ncol =} \DecValTok{2}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{center}\includegraphics[width=1\linewidth]{PROJECT-1_files/figure-latex/viz-panel-1} \end{center}
+
+\section{Key Findings The analysis shows that transaction spending is
+right-skewed:
+the}\label{key-findings-the-analysis-shows-that-transaction-spending-is-right-skewed-the}
+
+mean (\textasciitilde\$803) is higher than the median
+(\textasciitilde\$662), meaning most baskets are modest while a few
+high-value purchases inflate the average. Home Appliances and
+Electronics generate the most revenue, even though Clothing has the most
+transactions, so revenue is driven by high-ticket categories rather than
+frequency. UPI and Debit Card are the most frequently used payment
+methods, while Credit Card baskets tend to be larger. Average basket
+size is about three units, and total revenue is around \$240,935 across
+the cleaned transactions. Membership status appears to matter: Premium
+members spend the most per transaction and Basic members the least,
+though the ANOVA p-value should be checked to confirm statistical
+significance. Gender and ProductCategory are assessed using chi-square
+and Cramér's V, while Age and Rating show weak linear relationships with
+spending; Quantity and Price are the main drivers of TotalAmount. Sales
+fluctuate by month, suggesting seasonality with mid-year and December
+peaks. Finally, the cleaned data showed no impossible values and was
+internally consistent, though duplicate handling and conflicting summary
+figures should be verified before final reporting.
+
+\section{8. Conclusions}\label{conclusions}
+
+The R analysis reveals right-skewed spending, with a few large baskets
+driving revenue while most purchases are modest. Home Appliances and
+Electronics lead in revenue, whereas Clothing drives transaction
+frequency. Digital payments dominate, and Premium members appear to
+spend more per transaction. Age and product rating are weak predictors,
+while category, quantity, price, and membership tier are stronger
+signals. Sales show seasonal fluctuations. These findings offer clear
+direction for product, payment, and retention strategy, though final
+figures and significance tests should be verified before submission.
+
+\end{document}

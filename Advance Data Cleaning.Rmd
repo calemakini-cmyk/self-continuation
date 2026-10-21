@@ -1,0 +1,331 @@
+---
+title: "Advance Data Cleaning"
+author: "MAKINI CALEB"
+date: "`r Sys.Date()`"
+output:
+  word_document: default
+  html_document: default
+---
+             
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo        = TRUE,          # show the code in HTML
+  tidy        = TRUE,          # run formatR on the code
+  tidy.opts   = list(
+    comment     = FALSE,       # <-- STRIP "#" comments from displayed code
+    blank       = FALSE,       # drop blank lines
+    widthCutoff = 120          # keep long lines readable
+  ),
+  comment     = NA,            # hide the "##" prefix on output
+  warning     = FALSE,
+  message     = FALSE,
+  eval        = TRUE,
+  fig.align   = "center",
+  fig.width   = 10,
+  fig.height  = 6,
+  dpi         = 120,
+  dev         = "png",
+  fig.show    = "asis",
+  fig.keep    = "all",
+  out.width   = "100%"
+)
+                      
+```
+
+
+# Set working directory
+```{r}
+setwd("C:/Users/ADMIN/OneDrive/Desktop/caleb makini")
+```
+
+
+# Import Libraries
+```{r}
+library(dplyr)
+library(tidyverse)
+library(rio)
+library(readxl)
+```
+
+
+
+# Data importation
+```{r}
+data=read_excel("dtcln.xlsx")
+head(data)
+```
+
+
+# Data stracture
+```{r}
+str(data)
+```
+
+
+# Check for missing values
+```{r}
+colSums(is.na(data))
+```
+
+
+# Separate continuous and categorical variables
+```{r}
+continuous_vars <- c(
+  "Age",
+  "Income_KES",
+  "Household_Size",
+  "Farm_Size_Acres",
+  "Monthly_Expenses_KES",
+  "Years_Experience"
+)
+
+categorical_vars <- c(
+  "Education",
+  "Gender",
+  "Extension_Access",
+  "Adoption_Status"
+)
+head(continuous_vars)
+```
+
+
+# Check missing values in continuous variables
+```{r}
+colSums(is.na(data[continuous_vars]))
+```
+
+
+# Replace missing continuous values with the MEAN
+```{r}
+for (var in continuous_vars) {
+  
+  data[[var]][is.na(data[[var]])] <- 
+    mean(data[[var]], na.rm = TRUE)
+}
+colSums(is.na(data[continuous_vars]))
+```
+
+
+# Replace missing continuous values with the MEDIAN
+```{r}
+for (var in continuous_vars) {
+  
+  data[[var]][is.na(data[[var]])] <- 
+    median(data[[var]], na.rm = TRUE)
+}
+```
+
+
+# Find the mode for categorical variables
+# R does not have a simple built-in mode() function for statistical mode, so we create one:
+```{r}
+get_mode <- function(x) {
+  
+  ux <- unique(na.omit(x))
+  
+  ux[which.max(
+    tabulate(match(x, ux))
+  )]
+}
+get_mode(data$Gender)
+```
+
+
+# Replace missing categorical values with the MODE
+```{r}
+for (var in categorical_vars) {
+  
+  mode_value <- get_mode(data[[var]])
+  
+  data[[var]][is.na(data[[var]])] <- mode_value
+}
+colSums(is.na(data[categorical_vars]))
+```
+
+
+# investigate OUTLIERS
+```{r}
+summary(data[continuous_vars])
+```
+
+# Simple case
+```{r}
+boxplot(data$Income_KES)
+```
+
+
+# Boxplot of all continuous variables
+```{r}
+boxplot(
+  data[continuous_vars],
+  main = "Boxplots of Continuous Variables",
+  las = 2,
+  col = "lightblue"
+)
+```
+
+
+# Scale the continuous variables
+```{r}
+scaled_data <- scale(data[continuous_vars])
+scaled_data <- as.data.frame(scaled_data)
+head(scaled_data)
+```
+
+
+# Boxplot of SCALED continuous variables
+```{r}
+boxplot(
+  scaled_data,
+  main = "Boxplots of Scaled Continuous Variables",
+  las = 2,
+  col = "lightgreen"
+)
+```
+
+
+# Important; Scaling does NOT remove outliers. It only puts variables on a common scale. The outlier remains an outlier after scaling.
+
+
+# Identify outliers using the IQR method
+```{r}
+find_outliers <- function(x) {
+  
+  Q1 <- quantile(x, 0.25, na.rm = TRUE)
+  Q3 <- quantile(x, 0.75, na.rm = TRUE)
+  
+  IQR_value <- Q3 - Q1
+  
+  lower <- Q1 - 1.5 * IQR_value
+  upper <- Q3 + 1.5 * IQR_value
+  
+  which(x < lower | x > upper)
+}
+```
+
+
+# Test
+```{r}
+find_outliers(data$Income_KES)
+find_outliers(data$Farm_Size_Acres)
+```
+
+
+# Count outliers in every continuous variable
+```{r}
+outlier_count <- sapply(
+  data[continuous_vars],
+  function(x) length(find_outliers(x))
+)
+
+outlier_count
+```
+
+
+# Replace outliers with the MEDIAN
+# We use the median because it is resistant to extreme observations.
+```{r}
+replace_outliers_median <- function(x) {
+  
+  Q1 <- quantile(x, 0.25, na.rm = TRUE)
+  Q3 <- quantile(x, 0.75, na.rm = TRUE)
+  
+  IQR_value <- Q3 - Q1
+  
+  lower <- Q1 - 1.5 * IQR_value
+  upper <- Q3 + 1.5 * IQR_value
+  
+  median_value <- median(x, na.rm = TRUE)
+  
+  x[x < lower | x > upper] <- median_value
+  
+  return(x)
+}
+
+for (var in continuous_vars) {
+  
+  data[[var]] <- replace_outliers_median(data[[var]])
+}
+```
+
+
+# Check the boxplots again
+```{r}
+boxplot(
+  data[continuous_vars],
+  main = "Continuous Variables After Outlier Treatment",
+  las = 2,
+  col = "lightblue"
+)
+```
+
+
+# Scaled data
+```{r}
+scaled_data <- as.data.frame(
+  scale(data[continuous_vars])
+)
+
+boxplot(
+  scaled_data,
+  main = "Boxplots of Scaled Continuous Variables After Outlier Treatment",
+  las = 2
+)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

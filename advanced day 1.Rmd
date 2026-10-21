@@ -1,0 +1,299 @@
+---
+title: 'advanced level R: Advanced data cleaning'
+author: "MAKINI Caleb"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+#setting a working directory]
+
+
+```{r}
+setwd("C:/Users/ADMIN/OneDrive/Desktop/caleb makini")
+
+```
+
+
+#loading libraries
+
+```{r}
+library(dplyr)
+library(tidyverse)
+library(ggplot2)
+library(tidyr)
+library(knitr)
+library(psych)
+library(rio)
+library(readxl)
+
+```
+
+
+#loading data
+```{r}
+data<-read_excel("dtcln.xlsx")
+head(data)
+```
+
+
+#data cleaning process
+
+#data structure
+
+```{r}
+str(data)
+```
+
+
+#check and detect missing values
+
+```{r}
+colSums(is.na(data))
+```
+
+
+
+
+#separate continous and categorical functions
+
+```{r}
+continous_vars<- c("Age",
+                   "Income_KES",
+                   "Household_Size",
+                   "Farm_Size_Acres",
+                   "Monthly_Expenses_KES",
+                   "Years_Experience"
+                   
+                   )
+  
+  
+categorical_vars<- c(
+  "Education",
+  "Gender",
+  "Extension_Access",
+  "Adoption_Status"
+  
+)
+head(continous_vars)
+
+```
+
+
+
+# checking miss values in continous variables
+
+```{r}
+colSums(is.na(data[continous_vars]))
+```
+
+
+
+#replace the missing values with mean
+```{r}
+for(var in continous_vars){
+  data[[var]][is.na(data[[var]])]<-
+    mean(data[[var]], na.rm= TRUE)
+}
+colSums(is.na(data[continous_vars]))
+```
+
+
+
+
+```{r}
+for(var in continous_vars){
+  data[[var]][is.na(data[[var]])]<-
+    mean(data[[var]], na.rm=TRUE)
+  
+}
+cat("Data successful replaced with the mean:\n and updated","\n")
+colSums(is.na(data[continous_vars]))
+
+```
+
+
+
+#replace the missing values with median
+
+```{r}
+for(var in continous_vars){
+  data[[var]][is.na(data[[var]])]<-
+    median(data[[var]], na.rm=TRUE)
+}
+colSums(is.na(data[continous_vars]))
+```
+
+
+#find the mode of categorical function
+
+```{r}
+get_mode<-function(x){
+  ux<-unique(na.omit(x))
+  ux[which.max(tabulate(
+    match(x, ux)
+  ))]
+}
+cat(" the most category:", get_mode(data$Gender), "\n")
+```
+
+
+
+#replace the missing  categorical values with mode
+
+```{r}
+for(var in categorical_vars){
+  mode_value<-get_mode(data[[var]])
+    data[[var]][is.na(data[[var]])]<-mode_value
+}
+colSums(is.na(data[categorical_vars]))
+```
+
+
+#investigation of outliers
+
+```{r}
+summary(data[continous_vars])
+```
+
+#simple case boxplot
+
+```{r}
+boxplot(data$Income_KES)
+
+```
+
+
+#boxplot ofall cont variables
+
+```{r}
+boxplot(
+  data[continous_vars],
+  main="boxplot of all continous valiables",
+  las=2,
+  col="skyblue"
+)
+```
+
+
+# scale the continous variables
+
+```{r}
+scaled_data<- scale(data[continous_vars])
+scaled_data<-as.data.frame(scaled_data)
+head(scaled_data)
+boxplot(scaled_data,
+        main="boxplot of scaled continous variuables",
+        las=2, col="yellowgreen",
+        outlier.fill="red"
+        )
+```
+
+
+#identification of outliers using IQR
+
+```{r}
+  find_outliers<- function(x){
+    Q1<-quantile(x, 0.25, na.rm=TRUE)
+    Q3<-quantile(x, 0.75, na.rm=TRUE)
+    IQR_value<-Q3-Q1
+    lower<-Q1-1.5*IQR_value
+    upper<-Q3+1.5*IQR_value
+    which(x<lower|x>upper)
+  }
+
+```
+
+
+
+#find outliuers
+
+```{r}
+find_outliers(data$Income_KES)
+find_outliers(data$Farm_Size_Acres)
+```
+
+
+#continous outliers in every continous varaiables using function supply
+
+```{r}
+outlier_count<-sapply(
+  data[continous_vars],
+  function(x) length(find_outliers)
+)
+outlier_count
+```
+
+
+#replacing outliers with median
+
+```{r}
+replace_outliers_median <- function(x) {
+  
+  Q1 <- quantile(x, 0.25, na.rm = TRUE)
+  Q3 <- quantile(x, 0.75, na.rm = TRUE)
+  
+  IQR_value <- Q3 - Q1
+  
+  lower <- Q1 - 1.5 * IQR_value
+  upper <- Q3 + 1.5 * IQR_value
+  
+  
+  median_value <- median(x, na.rm = TRUE)
+  
+  x[x < lower | x > upper] <- median_value
+  
+  return(x)
+}
+
+for (var in continous_vars) {
+  
+  data[[var]] <- replace_outliers_median(data[[var]])
+}
+
+```
+
+
+
+#plot the boxplot for confiramation
+
+```{r}
+boxplot(
+  data[continous_vars], 
+  main="confirmation after outlier treatment",
+  las=2,
+  col="orange"
+)
+```
+
+
+
+
+
+
+
+
+
+#scaled data
+
+```{r}
+scaled_data<-as.data.frame(
+  scale(data[continous_vars])
+)
+boxplot(
+  scaled_data, 
+  main=" Boxplot of scaled continous variables after outliers treatment",
+  las=2
+)
+```
+
+
+
+
+
+
+
+
+

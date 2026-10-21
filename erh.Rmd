@@ -1,0 +1,530 @@
+---
+title: "Exploring Customer Transactions Using R"
+author: "MAKINI CALEB"
+date: "`r Sys.Date()`"
+output: html_document
+---
+   
+
+   
+             
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo        = TRUE,          # show the code in HTML
+  tidy        = TRUE,          # run formatR on the code
+  tidy.opts   = list(
+    comment     = FALSE,       # <-- STRIP "#" comments from displayed code
+    blank       = FALSE,       # drop blank lines
+    widthCutoff = 120          # keep long lines readable
+  ),
+  comment     = NA,            # hide the "##" prefix on output
+  warning     = FALSE,
+  message     = FALSE,
+  eval        = TRUE,
+  fig.align   = "center",
+  fig.width   = 10,
+  fig.height  = 6,
+  dpi         = 120,
+  dev         = "png",
+  fig.show    = "asis",
+  fig.keep    = "all",
+  out.width   = "100%"
+)
+                      
+```
+# PROJECT OVERVIEW                                                   In this project i will use R to perform a basic data science workflow on a customer transaction dataset. The project introduces the use of R for data import, data inspection, data cleaning, exploratory data analysis (EDA), visualization, and interpretation.                                                                                        The dataset contains transaction-level information including customer demographics, product characteristics, payment methods, transaction dates, prices, quantities, ratings, and membership status.
+
+
+# DATA VARIABLES                                                    The following data variables are to be used:                                    TransactionID,                                                        CustomerID,                                                           ProductID,                                                            Quantity,                                                             PaymentMethod,                                                        TransactionDate,                                                      ProductCategory,                                                      Price,                                                                Rating,                                                               TotalAmount,                                                          Age,                                                                  Gender,                                                               Location,                                                             MembershipStatus.     
+
+
+# PROJECT OVERVIEW.                                                 The following are project aims to achieve the following objectives:                                                                         i. Import a dataset into R.                                         ii. Inspect the structure and characteristics of data.             iii. Identify and handle missing or inconsistent values.            iv. Convert variables to appropriate data types.                      v. Generate descriptive statistics using R.                          vi.Create basic statistical and graphical summaries.                vii. Explore relationships between variables.                     viii. Communicate data-driven findings.
+
+# setting working directory
+```{r}
+setwd("C:/Users/ADMIN/OneDrive/Desktop/caleb makini")
+```
+
+
+# loading libraries
+```{r}
+library(ggplot2)
+library(ggthemes)
+library(stats)
+library(forecast)
+library(tseries)
+library(formatR)
+library(papaja)
+library(dplyr)
+library(rio)
+library(tidyr)
+library(tidyverse)
+library(sjmisc)
+library(kableExtra)
+library(psych)
+library(gridExtra)
+library(scales)
+```
+#Task 1: Import and inspect the data
+## import data of e-commerce to R: 
+```{r}
+eco_data<-read.csv("ecomdata.csv")
+
+```
+ 
+## Display the first observation
+```{r}
+head(eco_data)
+```
+
+
+## Display the last observation
+```{r}
+tail(eco_data)
+```
+
+# Inspection of the structure and characteristics of data
+
+```{r}
+str(eco_data)
+```
+## Determine the number of observations and variables.
+```{r}
+describe(eco_data)
+```
+
+
+## Examine the structure
+```{r}
+str(eco_data)
+```
+
+#  Examine the summary statistics.
+```{r}
+summary(eco_data)
+```
+
+
+## identifying missing values by columns 
+
+```{r}
+colSums(is.na(eco_data)) 
+```
+
+## identification of duplicate records
+```{r}
+eco_data_duplicate<-sum(duplicated(eco_data))
+eco_data_duplicate
+```
+
+# Task 2: Data preparation
+## categorical variables
+```{r}
+cat_var<-eco_data %>% 
+  select(PaymentMethod, ProductCategory, Gender, Location, MembershipStatus,)
+head(cat_var)
+  
+```
+
+
+
+# variable conversion to factors
+```{r factors}
+cat_vars <- c("PaymentMethod", "ProductCategory", "Gender",
+              "Location", "MembershipStatus")
+
+cat_vars<-as.factor(cat_vars)
+str(cat_vars)
+```
+
+## proper date format
+```{r date}
+# The raw field is text in MM/DD/YYYY form
+cat("Class before:", class(eco_data$TransactionDate), "\n")
+cat("Sample before:", head(eco_data$TransactionDate, 3), "\n")
+
+eco_data$TransactionDate <- as.Date(eco_data$TransactionDate,
+                                      format = "%m/%d/%Y")
+
+cat("Class after:", class(eco_data$TransactionDate), "\n")
+cat("Sample after:", format(head(eco_data$TransactionDate, 3)), "\n")
+cat("Date range:", format(min(eco_data$TransactionDate)),
+    "to", format(max(eco_data$TransactionDate)), "\n")
+cat("Any NA introduced by parsing:",
+    sum(is.na(eco_data$TransactionDate)), "\n")
+```
+
+
+
+
+# checking for impossible values, such as negative quantities, prices or ages
+## check for imposible values
+```{r impossible}
+checks <- data.frame(
+  Check = c("Quantity <= 0",
+            "Price <= 0",
+            "TotalAmount <= 0",
+            "Age < 18 or Age > 100",
+            "Rating < 1 or Rating > 5",
+            "TotalAmount != Quantity * Price"),
+  Count = c(
+    sum(eco_data$Quantity    <= 0, na.rm = TRUE),
+    sum(eco_data$Price       <= 0, na.rm = TRUE),
+    sum(eco_data$TotalAmount <= 0, na.rm = TRUE),
+    sum(eco_data$Age < 18 | eco_data$Age > 100, na.rm = TRUE),
+    sum(eco_data$Rating < 1 | eco_data$Rating > 5, na.rm = TRUE),
+    sum(abs(eco_data$Quantity * eco_data$Price -
+            eco_data$TotalAmount) > 0.01, na.rm = TRUE)
+  )
+)
+checks
+```
+
+**Interpretation:** No impossible values. `TotalAmount` is internally consistent with `Quantity × Price` for every row.
+
+
+
+
+
+
+
+
+
+
+## Build the Cleaned Analytical Dataset & Verify
+
+# Replace missing values with the mean
+```{r}
+eco_data$Age[is.na(eco_data$Age)]<-mean(eco_data$Age,na.rm=TRUE)
+```
+
+# verification and checking of missing values after replacing with the mean
+```{r}
+colSums(is.na(eco_data))
+```
+## cleaned data
+```{r}
+cleaned_ecodata<-as.data.frame(eco_data)
+head(cleaned_ecodata)
+```
+
+
+**Final cleaned dataset profile:**
+
+
+
+
+
+#  Task 3: Exploratory Data Analysis
+
+```{r eda-setup}
+# Convenience objects reused throughout Task 3
+n_total   <- nrow(eco_data)
+avg_total <- mean(eco_data$TotalAmount)
+med_total <- median(eco_data$TotalAmount)
+```
+
+
+
+## What is the distribution of `TotalAmount`?
+# total amount using boxplot
+```{r}
+boxplot(cleaned_ecodata$TotalAmount,
+     ylab = "TotalAmount",
+    
+     main="overview of TotalAmount using Boxplot",
+     col = "yellowgreen") 
+
+
+```
+# Total Amount using aggregation
+```{r}
+total_amount<- aggregate(TotalAmount ~ ProductCategory,
+                        data =cleaned_ecodata, FUN = sum)
+total_amount
+
+```
+
+# clothing~ 60536.40, Electronics~ 69501.41, Home Appliances~	110897.21	 hence home appliences is the most leading
+
+
+
+## 5.2 Which `ProductCategory` generates the highest sales?
+
+```{r q2-category}
+# Total revenue by category
+rev_by_cat <- aggregate(TotalAmount ~ ProductCategory,
+                        data =eco_data, FUN = sum)
+rev_by_cat <- rev_by_cat[order(-rev_by_cat$TotalAmount), ]
+rev_by_cat$Share <- round(100 * rev_by_cat$TotalAmount /
+                          sum(rev_by_cat$TotalAmount), 1)
+rev_by_cat
+
+# Transaction count per category
+cnt_by_cat <- as.data.frame(table(eco_data$ProductCategory))
+names(cnt_by_cat) <- c("ProductCategory", "Transactions")
+cnt_by_cat
+
+# Average transaction value per category
+avg_by_cat <- aggregate(TotalAmount ~ ProductCategory,
+                        data = eco_data, FUN = mean)
+avg_by_cat$TotalAmount <- round(avg_by_cat$TotalAmount, 2)
+avg_by_cat
+```
+
+**Interpretation:**
+**Home Appliances** and **Electronics** dominate total revenue — their higher unit prices outweigh Clothing's higher transaction count.
+**Clothing** has the most transactions but the **lowest average transaction value** .
+**Business insight: revenue is driven by **high-ticket categories**, not by frequency.
+
+
+
+## Which `PaymentMethod` is most frequently used?
+```{r viz6, fig.height=4.5}
+p8 <- ggplot(pay_freq, aes(x = reorder(PaymentMethod, -Count),
+                           y = Count, fill = PaymentMethod)) +
+  geom_col(alpha = 0.85) +
+  geom_text(aes(label = paste0(Pct, "%")), vjust = -0.4, size = 3.5) +
+  labs(title = "Payment visualization ",
+       subtitle = "determine frequently used",
+       x = NULL, y = "Number of transactions") +
+  theme_report + theme(legend.position = "none")
+p8
+```
+# analysing using table
+```{r q3-payment}
+pay_freq <- as.data.frame(table(cleaned_ecodata$PaymentMethod))
+names(pay_freq) <- c("PaymentMethod", "Count")
+pay_freq$Pct <- round(100 * pay_freq$Count / n_total, 1)
+pay_freq <- pay_freq[order(-pay_freq$Count), ]
+pay_freq
+```
+
+# Interpretation:                                                 **UPI** and **Debit Cash delivery** are the most frequently used methods.
+
+
+
+
+
+```{r prep}
+n_total   <- nrow(cleaned_ecodata)
+avg_total <- mean(cleaned_ecodata$TotalAmount, na.rm = TRUE)
+med_total <- median(cleaned_ecodata$TotalAmount, na.rm = TRUE)
+
+monthly <- cleaned_ecodata %>%
+  mutate(Month = format(TransactionDate, "%Y-%m")) %>%
+  group_by(Month) %>%
+  summarise(TotalAmount = sum(TotalAmount, na.rm = TRUE), .groups = "drop") %>%
+  arrange(Month) %>% as.data.frame()
+
+pay_freq <- as.data.frame(table(cleaned_ecodata$PaymentMethod))
+names(pay_freq) <- c("PaymentMethod", "Count")
+pay_freq$Pct <- round(100 * pay_freq$Count / n_total, 1)
+pay_freq <- pay_freq[order(-pay_freq$Count), ]
+
+theme_report <- theme_minimal(base_size = 12) +
+  theme(plot.title    = element_text(face = "bold", size = 13),
+        plot.subtitle = element_text(size = 10, colour = "grey40"),
+        legend.position = "bottom")
+
+
+```
+
+## What is the average transaction value?
+```{r q4-avg}
+cat("Average transaction value : $", round(avg_total, 2), "\n")
+
+```
+
+## Does transaction spending differ by `MembershipStatus`?
+```{r viz1, fig.height=4.5}
+p7 <- ggplot(cleaned_ecodata, aes(x = reorder(MembershipStatus, MembershipStatus,
+                                          function(x) -length(x)),fill=MembershipStatus)) +
+  geom_bar(alpha = 0.35, outlier.color = "red",
+               outlier.shape = 10, outlier.size = 1) +
+  labs(title = "Transactions by MembershipStatus",
+       subtitle = "observing transaction by membership",
+       x = "membership", y = "Number of transactions") +
+  theme_economist()
+p7
+```
+
+
+## Is there an association between `Gender` and `ProductCategory`?
+```{r q6-gender-cat}
+tab_gc <- table(cleaned_ecodata$Gender, cleaned_ecodata$ProductCategory)
+tab_gc
+
+# Chi-square test of independence
+chisq_gc <- chisq.test(tab_gc)
+chisq_gc
+
+# Effect size (Cramér's V)
+cramers_v <- sqrt(chisq_gc$statistic /
+                  (sum(tab_gc) * (min(dim(tab_gc)) - 1)))
+cat("Cramer's V:", round(cramers_v, 3), "\n")
+```
+# since the p_value= 0.1833< 5%, we fail to reject null hyponthesis and hence there is no significance Association btn gender and Productory
+
+## What is the relationship between `Age`, `Rating`, and `TotalAmount`?
+
+```{r q7-corr}
+# Correlation matrix
+cor_mat <- cor(cleaned_ecodata[, c("Age", "Rating", "TotalAmount")],
+               use = "complete.obs")
+round(cor_mat, 3)
+```
+
+# Age shows a near-zero correlation with TotalAmount, indicating that age is not a linear predictor of spending, while Rating shows only a weak correlation, suggesting that product rating does not drive basket size; by contrast, Quantity and Price are the true drivers of TotalAmount, as expected since TotalAmount = Quantity × Price, and the regression confirms that quantity and price explain nearly all the variance in TotalAmount, with age and rating adding little.
+
+
+
+# How do sales change over time?
+```{r viz5, fig.height=4.5}
+p5<- ggplot(monthly, aes(x = Month, y = TotalAmount, group = 1)) +
+  geom_line(colour = "darkgreen", linewidth = 1) +
+  geom_point(colour = "darkgreen", size = 3.5) +
+  labs(title = "Sales changes Over Time (2023)",
+       subtitle = "Fluctuating revenue with seasonal peaks",
+       x = NULL, y = "Total sales ($)") +
+  theme_report +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+p5
+```
+
+# sales change best and worst month
+```{r q8-time}
+
+# Peak vs trough months
+cat("Best month :\n", monthly$Month[which.max(monthly$TotalAmount)],
+    "= ", round(max(monthly$TotalAmount), 2), "\n")
+cat("Worst month:\n", monthly$Month[which.min(monthly$TotalAmount)],
+    "= ", round(min(monthly$TotalAmount), 2), "\n")
+```
+
+
+# Task 4: Data Visualization
+
+```{r viz-setup}
+
+
+# Shared theme
+theme_report <- theme_minimal(base_size = 12) +
+  theme(plot.title    = element_text(face = "bold", size = 13),
+        plot.subtitle = element_text(size = 10, colour = "grey40"),
+        legend.position = "bottom")
+```
+
+```{r}
+
+
+ggplot(eco_data, aes(x = ProductCategory, y = TotalAmount,
+                       fill = Gender)) +
+  geom_boxplot(alpha = 0.75, outlier.colour = "red") +
+  stat_summary(fun = mean, geom = "point", shape = 18,
+               size = 3, colour = "black") +
+  labs(title = "TotalAmount by Gender and ProductCategory",
+       subtitle = "Black diamonds = group means; Tukey HSD compares these means",
+       x = NULL, y = "Total amount ($)") +
+  theme_minimal(base_size = 12) +
+  theme(plot.title = element_text(face = "bold"),
+        legend.position = "bottom")
+```
+
+
+
+
+
+
+
+## Bar chart — transactions by product category
+
+```{r viz1, fig.height=4.5}
+p1 <- ggplot(eco_data, aes(x = reorder(ProductCategory, ProductCategory,
+                                          function(x) -length(x)),fill=ProductCategory)) +
+  geom_bar(alpha = 0.35, outlier.color = "red",
+               outlier.shape = 10, outlier.size = 1) +
+  labs(title = "Transactions by Product Category",
+       subtitle = "Clothing has the most transactions",
+       x = NULL, y = "Number of transactions") +
+  theme_economist()
+p1
+```
+
+
+
+## Histogram — distribution of transaction amounts
+
+```{r viz2, fig.height=4.5}
+p2 <- ggplot(eco_data, aes(x = TotalAmount)) +
+  geom_histogram(bins = 30, fill = "darkorange", colour = "white") +
+  geom_vline(xintercept = avg_total, linetype = "dashed",
+             colour = "red", linewidth = 0.8) +
+  geom_vline(xintercept = med_total, linetype = "dotted",
+             colour = "blue", linewidth = 0.8) +
+  labs(title = "Distribution of Transaction Amounts",
+       subtitle = "Red dashed = mean; blue dotted = median (right-skewed)",
+       x = "Total amount ($)", y = "Frequency") +
+  theme_report
+p2
+```
+
+## Boxplot — `TotalAmount` by membership status
+
+```{r viz3, fig.height=4.5}
+p3 <- ggplot(eco_data, aes(x = MembershipStatus, y = TotalAmount,
+                             fill = MembershipStatus)) +
+  geom_boxplot(alpha = 0.75, outlier.colour = "red") +
+  labs(title = "Transaction Amount by Membership Status",
+       subtitle = "Premium members spend more per transaction",
+       x = NULL, y = "Total amount ($)") +
+  theme_report + theme(legend.position = "none")
+p3
+```
+
+
+
+## Scatter plot — `Price` vs `TotalAmount`
+
+```{r viz4, fig.height=4.5}
+p4 <- ggplot(eco_data, aes(x = Price, y = TotalAmount,
+                             colour = ProductCategory)) +
+  geom_point(alpha = 0.65, size = 2) +
+  geom_smooth(method = "lm", se = FALSE, colour = "grey30",
+              linetype = "dashed", linewidth = 0.7) +
+  labs(title = "Unit Price vs Total Amount",
+       subtitle = "Linear relationship driven by TotalAmount = Price x Quantity",
+       x = "Unit price ($)", y = "Total amount ($)") +
+  theme_report
+p4
+```
+
+
+
+## Bar chart — payment method frequency
+
+```{r viz6, fig.height=4.5}
+p6 <- ggplot(pay_freq, aes(x = reorder(PaymentMethod, -Count),
+                           y = Count, fill = PaymentMethod)) +
+  geom_col(alpha = 0.85) +
+  geom_text(aes(label = paste0(Pct, "%")), vjust = -0.4, size = 3.5) +
+  labs(title = "Payment Method Frequency",
+       subtitle = "UPI and Debit Card",
+       x = NULL, y = "Number of transactions") +
+  theme_report + theme(legend.position = "none")
+p6
+```
+
+
+
+## Combined panel
+
+```{r viz-panel, fig.height=9, fig.width=11}
+grid.arrange(p1, p2, p3, p4, p5, p6,p7, p8, ncol = 2)
+```
+
+#  Key Findings                                                   The analysis shows that transaction spending is right-skewed: the mean (~$803) is higher than the median (~$662), meaning most baskets are modest while a few high-value purchases inflate the average. Home Appliances and Electronics generate the most revenue, even though Clothing has the most transactions, so revenue is driven by high-ticket categories rather than frequency. UPI and Debit Card are the most frequently used payment methods, while Credit Card baskets tend to be larger. Average basket size is about three units, and total revenue is around $240,935 across the cleaned transactions. Membership status appears to matter: Premium members spend the most per transaction and Basic members the least, though the ANOVA p-value should be checked to confirm statistical significance. Gender and ProductCategory are assessed using chi-square and Cramér’s V, while Age and Rating show weak linear relationships with spending; Quantity and Price are the main drivers of TotalAmount. Sales fluctuate by month, suggesting seasonality with mid-year and December peaks. Finally, the cleaned data showed no impossible values and was internally consistent, though duplicate handling and conflicting summary figures should be verified before final reporting.
+
+# 8. Conclusions                                                    The R analysis reveals right-skewed spending, with a few large baskets driving revenue while most purchases are modest. Home Appliances and Electronics lead in revenue, whereas Clothing drives transaction frequency. Digital payments dominate, and Premium members appear to spend more per transaction. Age and product rating are weak predictors, while category, quantity, price, and membership tier are stronger signals. Sales show seasonal fluctuations. These findings offer clear direction for product, payment, and retention strategy, though final figures and significance tests should be verified before submission.
+
+

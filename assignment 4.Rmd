@@ -1,0 +1,939 @@
+---
+title: "Session 6 and 7 Assignment: Correlation, Regression, and ANOVA"
+author: "MAKINI CALEB"
+date: "`r Sys.Date()`"
+output: html_document
+---
+             
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo        = TRUE,          # show the code in HTML
+  tidy        = TRUE,          # run formatR on the code
+  tidy.opts   = list(
+    comment     = FALSE,       # <-- STRIP "#" comments from displayed code
+    blank       = FALSE,       # drop blank lines
+    widthCutoff = 120          # keep long lines readable
+  ),
+  comment     = NA,            # hide the "##" prefix on output
+  warning     = FALSE,
+  message     = FALSE,
+  eval        = TRUE,
+  fig.align   = "center",
+  fig.width   = 10,
+  fig.height  = 6,
+  dpi         = 120,
+  dev         = "png",
+  fig.show    = "asis",
+  fig.keep    = "all",
+  out.width   = "100%"
+)
+                      
+```
+
+
+# setting a working directory
+```{r}
+setwd("C:/Users/ADMIN/OneDrive/Desktop/caleb makini")
+```
+
+
+
+# loading libraries
+```{r}
+library(dplyr)
+library(rio)
+library(tidyverse)
+library(ggthemes)
+library(ggplot2)
+library(summarytools)
+library(sjmisc)
+library(readxl)
+library(car)        # For VIF, Levene's test
+library(lmtest)     # For Breusch-Pagan test
+library(nortest)    # For Anderson-Darling test
+library(knitr)
+library(kableExtra)
+library(tidyr)
+library(broom)
+library(formatR)
+```
+
+# Data Loading and Preparation
+
+```{r load-data}
+
+raw_data <- read_xlsx("ass4.xlsx", sheet = "Sheet1")
+
+# Inspect the first few rows
+head(raw_data)
+```
+
+```{r clean-data}
+
+raw_data$ID <- as.character(raw_data$ID)
+
+# Keep only rows where ID is a simple number (not a formula string)
+clean_data <- raw_data[grepl("^[0-9]+$", raw_data$ID), ]
+
+# Convert ID back to numeric
+clean_data$ID <- as.numeric(clean_data$ID)
+
+# Check for duplicates based on all columns except ID
+# The data repeats every 30 rows, so we keep the first 30 unique records
+clean_data <- clean_data[!duplicated(clean_data[, -1]), ]
+
+# Verify the dimensions
+cat("Number of rows after cleaning:", nrow(clean_data), "\n")
+cat("Number of columns:", ncol(clean_data), "\n")
+
+# Display the cleaned data
+kable(head(clean_data, 10), caption = "First 10 rows of cleaned data")
+```
+
+```{r factor-conversion}
+# Convert categorical variables to factors
+clean_data$Department <- as.factor(clean_data$Department)
+clean_data$Work_Mode <- as.factor(clean_data$Work_Mode)
+
+# Summary of the data
+summary(clean_data)
+```
+
+
+
+# Question 1: Bivariate Correlation
+
+**Scenario:** The HR director wants to know if there is a relationship between an employee's tenure and their stress levels.
+
+## 1.1 Pearson Correlation Coefficient
+
+```{r q1-pearson}
+# Calculate Pearson correlation between Years_Experience and Stress_Index
+pearson_result <- cor.test(clean_data$Years_Experience, 
+                           clean_data$Stress_Index, 
+                           method = "pearson")
+
+pearson_result
+```
+
+
+```{r q1-pearson-interpret}
+# Extract key values
+r_value <- round(pearson_result$estimate, 3)
+p_value <- round(pearson_result$p.value, 4)
+df_value <- pearson_result$parameter
+
+cat("Pearson correlation coefficient (r) =", r_value, "\n")
+cat("Degrees of freedom =", df_value, "\n")
+cat("p-value =", p_value, "\n")
+cat("95% Confidence Interval: [", 
+    round(pearson_result$conf.int[1], 3), ", ", 
+    round(pearson_result$conf.int[2], 3), "]\n", sep = "")
+```
+
+## 1.2 Scatterplot and Linearity Check
+
+```{r q1-scatterplot}
+# Create scatterplot with regression line
+ggplot(clean_data, aes(x = Years_Experience, y = Stress_Index)) +
+  geom_point(color = "steelblue", size = 3, alpha = 0.7) +
+  geom_smooth(method = "lm", se = TRUE, color = "red", linetype = "dashed") +
+  labs(
+    title = "Scatterplot: Years of Experience vs. Stress Index",
+    subtitle = "With linear regression line and 95% confidence interval",
+    x = "Years of Experience",
+    y = "Stress Index"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(face = "bold", size = 14),
+    axis.title = element_text(size = 12)
+  )
+```
+
+
+
+
+
+```{r q1-outlier-check}
+# Check for outliers using boxplot
+par(mfrow = c(1, 2))
+boxplot(clean_data$Years_Experience, main = "Years of Experience", 
+        col = "lightblue", ylab = "Years")
+boxplot(clean_data$Stress_Index, main = "Stress Index", 
+        col = "lightgreen", ylab = "Stress Index")
+par(mfrow = c(1, 1))
+
+
+# Identify potential outliers using the 1.5*IQR rule
+Q1_exp <- quantile(clean_data$Years_Experience, 0.25)
+Q3_exp <- quantile(clean_data$Years_Experience, 0.75)
+IQR_exp <- Q3_exp - Q1_exp
+outliers_exp <- clean_data$Years_Experience[
+  clean_data$Years_Experience < (Q1_exp - 1.5 * IQR_exp) |
+  clean_data$Years_Experience > (Q3_exp + 1.5 * IQR_exp)
+]
+
+Q1_stress <- quantile(clean_data$Stress_Index, 0.25)
+Q3_stress <- quantile(clean_data$Stress_Index, 0.75)
+IQR_stress <- Q3_stress - Q1_stress
+outliers_stress <- clean_data$Stress_Index[
+  clean_data$Stress_Index < (Q1_stress - 1.5 * IQR_stress) |
+  clean_data$Stress_Index > (Q3_stress + 1.5 * IQR_stress)
+]
+
+cat("Outliers in Years_Experience:", 
+    ifelse(length(outliers_exp) == 0, "None", paste(outliers_exp, collapse = ", ")), "\n")
+cat("Outliers in Stress_Index:", 
+    ifelse(length(outliers_stress) == 0, "None", paste(outliers_stress, collapse = ", ")), "\n")
+```
+
+## 1.3 Spearman's Rank Correlation (if needed)
+
+```{r q1-spearman}
+# Calculate Spearman's rank correlation as a robustness check
+spearman_result <- cor.test(clean_data$Years_Experience, 
+                            clean_data$Stress_Index, 
+                            method = "spearman",
+                            exact = FALSE)
+
+spearman_result
+```
+
+```{r q1-spearman-interpret}
+cat("Spearman's rho =", round(spearman_result$estimate, 3), "\n")
+cat("p-value =", round(spearman_result$p.value, 4), "\n")
+```
+
+## 1.4 Hypotheses and Interpretation
+
+```{r q1-hypotheses}
+# Create a summary table
+hypothesis_table <- data.frame(
+  Test = c("Pearson", "Spearman"),
+  Statistic = c(round(pearson_result$estimate, 3), 
+                round(spearman_result$estimate, 3)),
+  p_value = c(round(pearson_result$p.value, 4), 
+              round(spearman_result$p.value, 4)),
+  Conclusion = c(
+    ifelse(pearson_result$p.value < 0.05, "Reject H0", "Fail to reject H0"),
+    ifelse(spearman_result$p.value < 0.05, "Reject H0", "Fail to reject H0")
+  )
+)
+
+kable(hypothesis_table, 
+      caption = "Correlation Test Results Summary",
+      col.names = c("Test", "Correlation Coefficient", "p-value", "Conclusion"))
+```
+
+**Hypotheses:**
+
+- **Null Hypothesis (H₀):** There is no relationship between years of experience and stress index (ρ = 0).
+- **Alternative Hypothesis (H₁):** There is a relationship between years of experience and stress index (ρ ≠ 0).
+
+**Interpretation:**
+
+Based on the scatterplot, the relationship between years of experience and stress index appears **linear** with a **negative** slope. There are no severe outliers that would distort the Pearson correlation. Therefore, the Pearson correlation is appropriate.
+
+The Pearson correlation coefficient is **r = `r round(pearson_result$estimate, 3)`**, indicating a **strong negative** linear relationship. As years of experience increase, stress levels tend to decrease. With a p-value of **`r round(pearson_result$p.value, 4)`**, which is less than 0.05, we **reject the null hypothesis**. There is a statistically significant negative correlation between years of experience and stress index.
+
+
+
+
+
+# Question 2: Simple Linear Regression
+
+**Scenario:** Management believes that more training directly leads to higher productivity.
+
+## 2.1 Simple Linear Regression
+
+```{r q2-model}
+# Fit simple linear regression
+model_simple <- lm(Productivity_Score ~ Training_Hours, data = clean_data)
+
+# Display model summary
+summary(model_simple)
+```
+
+```{r q2-tidy}
+# Tidy output of the model
+tidy_simple <- tidy(model_simple, conf.int = TRUE)
+kable(tidy_simple, 
+      caption = "Simple Linear Regression: Productivity ~ Training Hours",
+      digits = 4)
+```
+
+```{r q2-glm-output}
+# Model fit statistics
+glance_simple <- glance(model_simple)
+kable(glance_simple, 
+      caption = "Model Fit Statistics",
+      digits = 4)
+```
+
+## 2.2 R-squared Interpretation
+
+```{r q2-rsquared}
+r_squared <- round(summary(model_simple)$r.squared, 4)
+adj_r_squared <- round(summary(model_simple)$adj.r.squared, 4)
+
+cat("R-squared =", r_squared, "\n")
+cat("Adjusted R-squared =", adj_r_squared, "\n")
+cat("Percentage of variance explained =", r_squared * 100, "%\n")
+```
+
+**Interpretation:**
+
+The R-squared value is **`r r_squared`**, which means that **`r r_squared * 100`%** of the variance in productivity scores is explained by training hours. This indicates a **strong** linear relationship where training hours are a good predictor of productivity. The remaining **`r round((1 - r_squared) * 100, 1)`%** of the variance is due to other factors not included in the model.
+
+
+
+
+
+## 2.3 Regression Plot
+
+```{r q2-plot}
+ggplot(clean_data, aes(x = Training_Hours, y = Productivity_Score)) +
+  geom_point(color = "darkgreen", size = 3, alpha = 0.7) +
+  geom_smooth(method = "lm", se = TRUE, color = "red") +
+  labs(
+    title = "Simple Linear Regression: Training Hours vs. Productivity",
+    subtitle = paste0("R² = ", r_squared, " | p-value = ", 
+                      format.pval(summary(model_simple)$coefficients[2, 4], digits = 4)),
+    x = "Training Hours",
+    y = "Productivity Score"
+  ) +
+  theme_minimal()
+```
+
+
+
+
+
+
+
+# Question 3: Multiple Linear Regression
+
+**Scenario:** The analytics team wants a more robust model to predict productivity by factoring in experience, training, and stress.
+
+
+
+## 3.1 Multiple Linear Regression
+
+```{r q3-model}
+# Fit multiple linear regression
+model_multiple <- lm(Productivity_Score ~ Years_Experience + Training_Hours + Stress_Index, 
+                     data = clean_data)
+
+# Display model summary
+summary(model_multiple)
+```
+
+```{r q3-tidy}
+# Tidy output
+tidy_multiple <- tidy(model_multiple, conf.int = TRUE)
+kable(tidy_multiple, 
+      caption = "Multiple Linear Regression: Productivity ~ Experience + Training + Stress",
+      digits = 4)
+```
+
+```{r q3-glance}
+glance_multiple <- glance(model_multiple)
+kable(glance_multiple, 
+      caption = "Model Fit Statistics",
+      digits = 4)
+```
+
+
+
+## 3.2 Assumption Checks
+
+### 3.2.1 Normality of Residuals
+
+```{r q3-normality}
+# Q-Q plot of residuals
+par(mfrow = c(1, 2))
+plot(model_multiple, which = 2, main = "Q-Q Plot of Residuals")
+
+# Histogram of residuals
+residuals <- residuals(model_multiple)
+hist(residuals, main = "Histogram of Residuals", 
+     xlab = "Residuals", col = "lightblue", breaks = 15)
+par(mfrow = c(1, 1))
+
+# Shapiro-Wilk test for normality
+shapiro_test <- shapiro.test(residuals)
+cat("Shapiro-Wilk Normality Test:\n")
+cat("W =", round(shapiro_test$statistic, 4), "\n")
+cat("p-value =", round(shapiro_test$p.value, 4), "\n")
+if (shapiro_test$p.value > 0.05) {
+  cat("Conclusion: Residuals are normally distributed (fail to reject H0)\n")
+} else {
+  cat("Conclusion: Residuals deviate from normality (reject H0)\n")
+}
+```
+
+
+
+### 3.2.2 Homoscedasticity
+
+```{r q3-homoscedasticity}
+# Residuals vs Fitted plot
+plot(model_multiple, which = 1, main = "Residuals vs Fitted")
+
+# Breusch-Pagan test for homoscedasticity
+bp_test <- bptest(model_multiple)
+cat("Breusch-Pagan Test:\n")
+cat("BP statistic =", round(bp_test$statistic, 4), "\n")
+cat("p-value =", round(bp_test$p.value, 4), "\n")
+if (bp_test$p.value > 0.05) {
+  cat("Conclusion: Homoscedasticity assumed (fail to reject H0)\n")
+} else {
+  cat("Conclusion: Heteroscedasticity present (reject H0)\n")
+}
+
+# Scale-Location plot
+plot(model_multiple, which = 3, main = "Scale-Location Plot")
+```
+
+
+
+### 3.2.3 Multicollinearity (VIF)
+
+```{r q3-vif}
+# Calculate VIF for each predictor
+vif_values <- vif(model_multiple)
+kable(data.frame(Predictor = names(vif_values), VIF = round(vif_values, 3)),
+      caption = "Variance Inflation Factors (VIF)",
+      row.names = FALSE)
+
+cat("\nInterpretation: VIF < 5 indicates no severe multicollinearity.\n")
+cat("VIF < 10 is acceptable; VIF > 10 indicates problematic multicollinearity.\n")
+```
+
+
+
+
+## 3.3 Statistical Significance of Predictors
+
+```{r q3-significance}
+# Extract p-values
+p_values <- tidy_multiple$p.value
+names(p_values) <- tidy_multiple$term
+
+# Identify significant predictors at alpha = 0.05
+significant <- names(p_values)[p_values < 0.05 & names(p_values) != "(Intercept)"]
+
+cat("Significant predictors at α = 0.05:\n")
+if (length(significant) > 0) {
+  for (pred in significant) {
+    cat("-", pred, "(p =", round(p_values[pred], 4), ")\n")
+  }
+} else {
+  cat("None of the predictors are statistically significant.\n")
+}
+
+# Create a summary table
+sig_table <- data.frame(
+  Predictor = tidy_multiple$term,
+  Estimate = round(tidy_multiple$estimate, 4),
+  Std_Error = round(tidy_multiple$std.error, 4),
+  t_value = round(tidy_multiple$statistic, 4),
+  p_value = round(tidy_multiple$p.value, 4),
+  Significant = ifelse(tidy_multiple$p.value < 0.05, "Yes", "No")
+)
+kable(sig_table, caption = "Multiple Regression Coefficients and Significance")
+```
+
+
+
+
+
+
+# Question 4: One-Way ANOVA
+
+#Scenario:***The company wants to know if there is a significant difference in average productivity across the three departments.
+
+## 4.1 Assumption Testing
+
+
+### 4.1.1 Normality (Shapiro-Wilk by Group)
+
+```{r q4-normality}
+# Shapiro-Wilk test for each department
+departments <- levels(clean_data$Department)
+shapiro_results <- data.frame(
+  Department = character(),
+  W_statistic = numeric(),
+  p_value = numeric(),
+  Normal = character(),
+  stringsAsFactors = FALSE
+)
+
+for (dept in departments) {
+  subset_data <- clean_data$Productivity_Score[clean_data$Department == dept]
+  test <- shapiro.test(subset_data)
+  shapiro_results <- rbind(shapiro_results, data.frame(
+    Department = dept,
+    W_statistic = round(test$statistic, 4),
+    p_value = round(test$p.value, 4),
+    Normal = ifelse(test$p.value > 0.05, "Yes", "No")
+  ))
+}
+
+kable(shapiro_results, 
+      caption = "Shapiro-Wilk Normality Test by Department",
+      row.names = FALSE)
+
+cat("\nNote: If p < 0.05, the data significantly deviates from normality.\n")
+```
+
+
+
+
+### 4.1.2 Homogeneity of Variances (Levene's Test)
+
+```{r q4-levene}
+# Levene's test
+levene_test <- leveneTest(Productivity_Score ~ Department, data = clean_data)
+kable(data.frame(
+  Test = "Levene's Test",
+  F_statistic = round(levene_test$`F value`[1], 4),
+  p_value = round(levene_test$`Pr(>F)`[1], 4),
+  Equal_Variance = ifelse(levene_test$`Pr(>F)`[1] > 0.05, "Yes", "No")
+), caption = "Levene's Test for Homogeneity of Variances")
+
+cat("\nIf p > 0.05, we fail to reject the null hypothesis of equal variances.\n")
+```
+
+## 4.2 One-Way ANOVA
+
+```{r q4-anova}
+# Fit One-Way ANOVA
+anova_model <- aov(Productivity_Score ~ Department, data = clean_data)
+anova_summary <- summary(anova_model)
+
+# Display ANOVA table
+kable(anova_summary[[1]], 
+      caption = "One-Way ANOVA: Productivity ~ Department",
+      digits = 4)
+
+# Extract p-value
+anova_p <- anova_summary[[1]]$`Pr(>F)`[1]
+cat("\nANOVA p-value =", round(anova_p, 4), "\n")
+if (anova_p < 0.05) {
+  cat("Conclusion: There is a significant difference in productivity across departments.\n")
+} else {
+  cat("Conclusion: No significant difference in productivity across departments.\n")
+}
+```
+
+## 4.3 Post-Hoc Test (Tukey's HSD)
+
+```{r q4-turkey}
+# Tukey's HSD post-hoc test
+tukey_result <- TukeyHSD(anova_model)
+
+# Display results
+kable(as.data.frame(tukey_result$Department), 
+      caption = "Tukey's HSD Post-Hoc Test",
+      digits = 4)
+
+# Plot
+plot(tukey_result)
+```
+
+
+
+
+
+
+# Question 5: Kruskal-Wallis H Test (Non-Parametric)
+
+**Scenario:** The lead statistician notices that the productivity score for the Sales department is heavily skewed and violates the normality assumption.
+
+## 5.1 Kruskal-Wallis Test
+
+```{r q5-kruskal}
+# Kruskal-Wallis test
+kruskal_result <- kruskal.test(Productivity_Score ~ Department, data = clean_data)
+
+cat("Kruskal-Wallis Rank Sum Test:\n")
+cat("Chi-squared =", round(kruskal_result$statistic, 4), "\n")
+cat("df =", kruskal_result$parameter, "\n")
+cat("p-value =", round(kruskal_result$p.value, 4), "\n")
+
+if (kruskal_result$p.value < 0.05) {
+  cat("\nConclusion: There is a significant difference in productivity across departments.\n")
+} else {
+  cat("\nConclusion: No significant difference in productivity across departments.\n")
+}
+```
+
+## 5.2 Comparison with ANOVA
+
+```{r q5-comparison}
+# Create comparison table
+comparison_table <- data.frame(
+  Test = c("One-Way ANOVA", "Kruskal-Wallis H"),
+  p_value = c(round(anova_p, 4), round(kruskal_result$p.value, 4)),
+  Conclusion = c(
+    ifelse(anova_p < 0.05, "Significant difference", "No significant difference"),
+    ifelse(kruskal_result$p.value < 0.05, "Significant difference", "No significant difference")
+  )
+)
+
+kable(comparison_table, 
+      caption = "Comparison of Parametric and Non-Parametric Tests",
+      row.names = FALSE)
+```
+
+**Interpretation:**
+
+- **One-Way ANOVA p-value:** `r round(anova_p, 4)`
+- **Kruskal-Wallis p-value:** `r round(kruskal_result$p.value, 4)`
+
+`r if(round(anova_p, 4) == round(kruskal_result$p.value, 4)) "Both tests yield the same conclusion." else "The conclusions are similar/different."` The Kruskal-Wallis test is more robust to violations of normality and is appropriate when the Sales department's productivity scores are heavily skewed. If both tests lead to the same conclusion, we can be more confident in our findings.
+
+
+
+
+
+# Question 6: Two-Way ANOVA
+
+**Scenario:** Executive leadership wants to understand if productivity is influenced by Department, Work_Mode, and their interaction.
+
+## 6.1 Two-Way ANOVA
+
+```{r q6-twoway}
+# Fit Two-Way ANOVA with interaction
+twoway_model <- aov(Productivity_Score ~ Department * Work_Mode, data = clean_data)
+twoway_summary <- summary(twoway_model)
+
+# Display ANOVA table
+kable(twoway_summary[[1]], 
+      caption = "Two-Way ANOVA: Productivity ~ Department * Work_Mode",
+      digits = 4)
+```
+
+## 6.2 Interaction Plot
+
+```{r q6-interaction-plot}
+# Interaction plot
+interaction.plot(x.factor = clean_data$Work_Mode,
+                 trace.factor = clean_data$Department,
+                 response = clean_data$Productivity_Score,
+                 fun = mean,
+                 type = "b",
+                 col = c("red", "blue", "green"),
+                 pch = c(19, 17, 15),
+                 fixed = TRUE,
+                 legend = TRUE,
+                 xlab = "Work Mode",
+                 ylab = "Mean Productivity Score",
+                 trace.label = "Department",
+                 main = "Interaction Plot: Department × Work Mode")
+```
+
+```{r q6-ggplot-interaction}
+# Alternative ggplot interaction plot
+clean_data %>%
+  group_by(Department, Work_Mode) %>%
+  summarise(Mean_Productivity = mean(Productivity_Score), .groups = "drop") %>%
+  ggplot(aes(x = Work_Mode, y = Mean_Productivity, 
+             color = Department, group = Department)) +
+  geom_line(size = 1.2) +
+  geom_point(size = 4) +
+  labs(
+    title = "Interaction Plot: Department × Work Mode",
+    subtitle = "Mean Productivity Score by Department and Work Mode",
+    x = "Work Mode",
+    y = "Mean Productivity Score",
+    color = "Department"
+  ) +
+  theme_minimal() +
+  theme(plot.title = element_text(face = "bold"))
+```
+
+## 6.3 Post-Hoc Tests (if interaction is significant)
+
+```{r q6-posthoc}
+# Check if interaction is significant
+interaction_p <- twoway_summary[[1]]$`Pr(>F)`[3]
+
+if (!is.na(interaction_p) && interaction_p < 0.05) {
+  cat("Interaction effect is significant (p =", round(interaction_p, 4), ").\n")
+  cat("Performing post-hoc analysis...\n\n")
+  
+  # Tukey HSD for all pairwise comparisons
+  tukey_twoway <- TukeyHSD(twoway_model)
+  kable(as.data.frame(tukey_twoway$`Department:Work_Mode`), 
+        caption = "Tukey's HSD for Department:Work_Mode Interaction",
+        digits = 4)
+} else {
+  cat("Interaction effect is not significant (p =", round(interaction_p, 4), ").\n")
+  cat("Interpreting main effects only.\n\n")
+  
+  # Main effect post-hoc
+  tukey_dept <- TukeyHSD(aov(Productivity_Score ~ Department, data = clean_data))
+  kable(as.data.frame(tukey_dept$Department), 
+        caption = "Tukey's HSD for Department Main Effect",
+        digits = 4)
+}
+```
+
+## 6.4 Interpretation
+
+```{r q6-interpretation}
+# Extract p-values
+dept_p <- twoway_summary[[1]]$`Pr(>F)`[1]
+workmode_p <- twoway_summary[[1]]$`Pr(>F)`[2]
+interaction_p <- twoway_summary[[1]]$`Pr(>F)`[3]
+
+cat("=== Two-Way ANOVA Results ===\n\n")
+cat("Main Effect of Department:\n")
+cat("  F =", round(twoway_summary[[1]]$`F value`[1], 4), 
+    ", p =", round(dept_p, 4), "\n")
+cat("  Interpretation:", ifelse(dept_p < 0.05, 
+    "Significant main effect of Department", 
+    "No significant main effect of Department"), "\n\n")
+
+cat("Main Effect of Work_Mode:\n")
+cat("  F =", round(twoway_summary[[1]]$`F value`[2], 4), 
+    ", p =", round(workmode_p, 4), "\n")
+cat("  Interpretation:", ifelse(workmode_p < 0.05, 
+    "Significant main effect of Work_Mode", 
+    "No significant main effect of Work_Mode"), "\n\n")
+
+cat("Interaction Effect (Department × Work_Mode):\n")
+cat("  F =", round(twoway_summary[[1]]$`F value`[3], 4), 
+    ", p =", round(interaction_p, 4), "\n")
+cat("  Interpretation:", ifelse(interaction_p < 0.05, 
+    "Significant interaction effect - the effect of Work Mode depends on Department", 
+    "No significant interaction effect - the effect of Work Mode is consistent across Departments"), "\n")
+```
+
+
+# Summary of Findings
+```{r summary-auto, echo=FALSE, results='asis'}
+# ============================================================
+# AUTOMATICALLY POPULATED SUMMARY
+# Recomputes every model from clean_data so it never fails,
+# regardless of what happened in earlier chunks.
+# ============================================================
+
+
+
+# ---------- Helper: safely run a model ----------
+try_model <- function(expr) {
+  tryCatch(expr, error = function(e) NULL)
+}
+
+# ---------- Q1: Pearson & Spearman ----------
+q1_pearson  <- try_model(cor.test(clean_data$Years_Experience,
+                                  clean_data$Stress_Index,
+                                  method = "pearson"))
+q1_spearman <- try_model(cor.test(clean_data$Years_Experience,
+                                  clean_data$Stress_Index,
+                                  method = "spearman", exact = FALSE))
+
+# ---------- Q2: Simple Linear Regression ----------
+q2_model   <- try_model(lm(Productivity_Score ~ Training_Hours,
+                           data = clean_data))
+q2_glance  <- if (!is.null(q2_model)) glance(q2_model) else NULL
+
+# ---------- Q3: Multiple Linear Regression ----------
+q3_model  <- try_model(lm(Productivity_Score ~ Years_Experience +
+                                            Training_Hours +
+                                            Stress_Index,
+                          data = clean_data))
+q3_tidy   <- if (!is.null(q3_model)) tidy(q3_model)   else NULL
+q3_glance <- if (!is.null(q3_model)) glance(q3_model) else NULL
+
+# ---------- Q4: One-Way ANOVA ----------
+q4_aov <- try_model(aov(Productivity_Score ~ Department, data = clean_data))
+q4_tbl <- if (!is.null(q4_aov)) tidy(q4_aov) else NULL
+q4_p   <- if (!is.null(q4_tbl)) q4_tbl$p.value[q4_tbl$term == "Department"] else NA
+
+# ---------- Q5: Kruskal-Wallis ----------
+q5_kw <- try_model(kruskal.test(Productivity_Score ~ Department,
+                                data = clean_data))
+q5_p  <- if (!is.null(q5_kw)) q5_kw$p.value else NA
+
+# ---------- Q6: Two-Way ANOVA ----------
+q6_aov <- try_model(aov(Productivity_Score ~ Department * Work_Mode,
+                        data = clean_data))
+q6_tbl <- if (!is.null(q6_aov)) tidy(q6_aov) else NULL
+
+get_p <- function(tbl, term) {
+  if (is.null(tbl)) return(NA_real_)
+  v <- tbl$p.value[tbl$term == term]
+  if (length(v) == 0) NA_real_ else v
+}
+
+q6_p_dept <- get_p(q6_tbl, "Department")
+q6_p_mode <- get_p(q6_tbl, "Work_Mode")
+q6_p_int  <- get_p(q6_tbl, "Department:Work_Mode")
+
+# ============================================================
+# Build the auto-populated summary table
+# ============================================================
+sig_flag <- function(p) ifelse(is.na(p), "—",
+                        ifelse(p < 0.001, "***",
+                        ifelse(p < 0.01,  "**",
+                        ifelse(p < 0.05,  "*", "ns"))))
+
+fmt_p <- function(p) ifelse(is.na(p), "—",
+                     ifelse(p < 0.001, "< 0.001",
+                            sprintf("%.4f", p)))
+
+summary_df <- data.frame(
+  Question = c("Q1", "Q1",
+               "Q2",
+               "Q3",
+               "Q4",
+               "Q5",
+               "Q6", "Q6", "Q6"),
+  Analysis = c("Pearson correlation (Experience vs Stress)",
+               "Spearman correlation (Experience vs Stress)",
+               "Simple linear regression (Training -> Productivity)",
+               "Multiple linear regression (Experience + Training + Stress -> Productivity)",
+               "One-Way ANOVA (Productivity ~ Department)",
+               "Kruskal-Wallis H (Productivity ~ Department)",
+               "Two-Way ANOVA: Department main effect",
+               "Two-Way ANOVA: Work_Mode main effect",
+               "Two-Way ANOVA: Department x Work_Mode interaction"),
+  Statistic = c(
+    if (!is.null(q1_pearson))  sprintf("r = %.3f", q1_pearson$estimate)  else "—",
+    if (!is.null(q1_spearman)) sprintf("rho = %.3f", q1_spearman$estimate) else "—",
+    if (!is.null(q2_glance))   sprintf("R2 = %.4f", q2_glance$r.squared)   else "—",
+    if (!is.null(q3_glance))   sprintf("R2 = %.4f, adj R2 = %.4f",
+                                       q3_glance$r.squared,
+                                       q3_glance$adj.r.squared) else "—",
+    if (!is.null(q4_tbl))      sprintf("F = %.3f",
+                                       q4_tbl$statistic[q4_tbl$term == "Department"]) else "—",
+    if (!is.null(q5_kw))       sprintf("chi2 = %.3f, df = %d",
+                                       q5_kw$statistic, q5_kw$parameter) else "—",
+    if (!is.null(q6_tbl))      sprintf("F = %.3f", get_p(q6_tbl,"Department")*0 +
+                                       q6_tbl$statistic[q6_tbl$term=="Department"]) else "—",
+    if (!is.null(q6_tbl))      sprintf("F = %.3f", q6_tbl$statistic[q6_tbl$term=="Work_Mode"]) else "—",
+    if (!is.null(q6_tbl))      sprintf("F = %.3f",
+                                       q6_tbl$statistic[q6_tbl$term=="Department:Work_Mode"]) else "—"
+  ),
+  p_value = c(
+    fmt_p(if (!is.null(q1_pearson))  q1_pearson$p.value  else NA),
+    fmt_p(if (!is.null(q1_spearman)) q1_spearman$p.value else NA),
+    fmt_p(if (!is.null(q2_glance))   q2_glance$p.value   else NA),
+    fmt_p(if (!is.null(q3_glance))   q3_glance$p.value   else NA),
+    fmt_p(q4_p),
+    fmt_p(q5_p),
+    fmt_p(q6_p_dept),
+    fmt_p(q6_p_mode),
+    fmt_p(q6_p_int)
+  ),
+  Sig = c(sig_flag(if (!is.null(q1_pearson))  q1_pearson$p.value  else NA),
+          sig_flag(if (!is.null(q1_spearman)) q1_spearman$p.value else NA),
+          sig_flag(if (!is.null(q2_glance))   q2_glance$p.value   else NA),
+          sig_flag(if (!is.null(q3_glance))   q3_glance$p.value   else NA),
+          sig_flag(q4_p),
+          sig_flag(q5_p),
+          sig_flag(q6_p_dept),
+          sig_flag(q6_p_mode),
+          sig_flag(q6_p_int))
+)
+
+# ---------- Auto-generated narrative ----------
+sig_predictors <- if (!is.null(q3_tidy)) {
+  q3_tidy$term[q3_tidy$p.value < 0.05 & q3_tidy$term != "(Intercept)"]
+} else character(0)
+
+verdict <- function(p, sig_msg, ns_msg) {
+  if (is.na(p)) "Not computed"
+  else if (p < 0.05) sig_msg
+  else ns_msg
+}
+
+# ============================================================
+# Render
+# ============================================================
+cat("\n\n## Automated Summary Table\n\n")
+
+kable(summary_df,
+      col.names = c("Q", "Analysis", "Statistic", "p-value", "Sig."),
+      caption   = "Auto-populated summary of all hypothesis tests (significance codes: *** p<0.001, ** p<0.01, * p<0.05, ns = not significant)",
+      align     = c("c","l","l","r","c"),
+      row.names = FALSE) %>%
+  kable_styling(bootstrap_options = c("striped","hover","condensed"),
+                full_width = FALSE,
+                position   = "left")
+
+cat("\n\n## Automated Interpretation\n\n")
+
+cat("**Q1 — Correlation (Experience vs Stress).** ",
+    sprintf("Pearson r = %.3f (p = %s); Spearman rho = %.3f (p = %s). ",
+            if (!is.null(q1_pearson))  q1_pearson$estimate  else NA,
+            fmt_p(if (!is.null(q1_pearson))  q1_pearson$p.value  else NA),
+            if (!is.null(q1_spearman)) q1_spearman$estimate else NA,
+            fmt_p(if (!is.null(q1_spearman)) q1_spearman$p.value else NA)),
+    verdict(if (!is.null(q1_pearson)) q1_pearson$p.value else NA,
+            "There is a statistically significant relationship.",
+            "No statistically significant relationship was detected."),
+    "\n\n")
+
+cat("**Q2 — Simple Regression (Training -> Productivity).** ",
+    if (!is.null(q2_glance))
+      sprintf("The model explains %.2f%% of the variance in Productivity (R2 = %.4f, p = %s).",
+              q2_glance$r.squared * 100, q2_glance$r.squared,
+              fmt_p(q2_glance$p.value))
+    else "Model not available.",
+    "\n\n")
+
+cat("**Q3 — Multiple Regression (Experience + Training + Stress -> Productivity).** ",
+    if (!is.null(q3_glance))
+      sprintf("Model R2 = %.4f (adj R2 = %.4f, p = %s). ",
+              q3_glance$r.squared, q3_glance$adj.r.squared,
+              fmt_p(q3_glance$p.value))
+    else "",
+    if (length(sig_predictors) > 0)
+      sprintf("Statistically significant predictor(s) at alpha = 0.05: %s.",
+              paste(sig_predictors, collapse = ", "))
+    else "No predictors were statistically significant at alpha = 0.05.",
+    "\n\n")
+
+cat("**Q4 — One-Way ANOVA (Productivity ~ Department).** ",
+    verdict(q4_p,
+            "Departments differ significantly in mean Productivity.",
+            "No significant difference in mean Productivity across departments."),
+    sprintf(" (p = %s)", fmt_p(q4_p)),
+    "\n\n")
+
+cat("**Q5 — Kruskal-Wallis H (Productivity ~ Department).** ",
+    verdict(q5_p,
+            "The non-parametric test also detects a significant difference between departments.",
+            "The non-parametric test finds no significant difference between departments."),
+    sprintf(" (p = %s)", fmt_p(q5_p)),
+    if (!is.na(q4_p) && !is.na(q5_p))
+      ifelse((q4_p < 0.05) == (q5_p < 0.05),
+             " The conclusion is unchanged compared with the parametric ANOVA.",
+             " Note: the conclusion differs from the parametric ANOVA.")
+    else "",
+    "\n\n")
+
+cat("**Q6 — Two-Way ANOVA (Productivity ~ Department * Work_Mode).**\n\n")
+cat(sprintf("- Department main effect: p = %s -> %s\n",
+            fmt_p(q6_p_dept),
+            verdict(q6_p_dept,
+                    "significant.",
+                    "not significant.")))
+cat(sprintf("- Work_Mode main effect: p = %s -> %s\n",
+            fmt_p(q6_p_mode),
+            verdict(q6_p_mode,
+                    "significant.",
+                    "not significant.")))
+cat(sprintf("- Department x Work_Mode interaction: p = %s -> %s\n",
+            fmt_p(q6_p_int),
+            verdict(q6_p_int,
+                    "significant interaction; the effect of Work Mode depends on Department.",
+                    "no significant interaction; Work Mode effects are consistent across Departments.")))
+                   
+```

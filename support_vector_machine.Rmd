@@ -1,0 +1,264 @@
+---
+title: "Support Vector Machine"
+author: "MAKINI CALEB"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+             
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo        = TRUE,          # show the code in HTML
+  tidy        = TRUE,          # run formatR on the code
+  tidy.opts   = list(
+    comment     = FALSE,       # <-- STRIP "#" comments from displayed code
+    blank       = FALSE,       # drop blank lines
+    widthCutoff = 120          # keep long lines readable
+  ),
+  comment     = NA,            # hide the "##" prefix on output
+  warning     = FALSE,
+  message     = FALSE,
+  eval        = TRUE,
+  fig.align   = "center",
+  fig.width   = 10,
+  fig.height  = 6,
+  dpi         = 120,
+  dev         = "png",
+  fig.show    = "asis",
+  fig.keep    = "all",
+  out.width   = "100%"
+)
+                      
+```
+
+# SETTING A WORKING DIRECTORY
+```{r}
+ setwd("C:/Users/ADMIN/OneDrive/Desktop/caleb makini")
+
+```
+
+# load libraries
+```{r}
+library(dplyr)
+library(tidyverse)
+library(e1071)
+library(caret)
+library(psych)
+library(ggplot2)
+```
+
+# support vector machine(SVM)
+- is a suppervised machine learning algorthm used for both classification and regression task.
+- svm woks by finding optimal boundary (hyperplane)
+   that best separates data points into different classes while maximising the margin btn them
+-
+
+
+
+# load data set
+```{r}
+data(mtcars)
+head(data)
+```
+
+# check structure
+```{r}
+str(mtcars)
+```
+
+
+# summary statistics
+```{r}
+describe(mtcars)
+```
+
+
+
+# check missing values
+```{r}
+colSums((is.na(mtcars)))
+```
+
+
+
+# split data
+```{r}
+set.seed(123)
+split_index<-createDataPartition(mtcars$mpg, p=0.8, list=FALSE)
+train_data1<-mtcars[split_index, ]
+test_data1<-mtcars[-split_index, ]
+```
+
+
+# data dimension
+```{r}
+dim(train_data1)
+dim(test_data1)
+```
+
+# scale the predictor valiables
+```{r}
+# separate predictors and targets
+x_train<- train_data1[, -1]
+y_train<-train_data1$mpg
+
+x_test<-test_data1[, -1]
+y_test<-test_data1$mpg
+
+
+# standardization
+
+preProc<- preProcess(x_train,
+                      method =c("center", "scale"))
+                     
+                     x_train_scaled<-predict(preProc, x_train)
+                     x_test_scaled<-predict(preProc, x_test)
+
+```
+
+# train SVM model
+```{r}
+svm_model<-svm(x=x_train_scaled,
+              y=y_train,
+              type="eps-regression",
+              kernel="radial")
+# view model
+print(svm_model)
+```
+
+# make predictions
+```{r}
+predictions<-predict(svm_model, newdata=x_test_scaled)
+head(predictions)
+
+```
+
+# evaluate model performance
+### rmse
+```{r}
+rmse<-sqrt(mean((predictions - y_test)^2))
+rmse
+```
+
+
+## mae
+```{r}
+mae<- mean(abs(predictions -y_test))
+mae
+```
+
+### r2
+```{r}
+R2=cor(predictions, y_test)^2
+R2
+```
+
+
+## actual vs predicted values
+```{r}
+results<-data.frame(actual=y_test,
+predicted= round(predictions, 2)
+)
+results
+```
+
+
+### scatterplot of predictions
+```{r}
+plot(y_test,predictions, main="Actual vs Predicted",
+     xlab="actual MPG",
+     ylab="predicted mpg")
+abline(0, 1, col="red", lwd=2)
+```
+
+## hyperparamater tuning for better accuracy
+```{r}
+set.seed(123)
+turned_model<-tune(
+  svm,
+  mpg~.,
+  data=train_data1,
+  kernel= "radial",
+  ranges=list(
+    cost=c(0.1, 1, 10, 100),
+    gamma=c(.001, .01, .1, 1)
+  )
+)
+summary(turned_model)
+```
+
+
+## best model
+```{r}
+best_svm<- turned_model$best.model
+pred_best<- predict(best_svm, test_data1)
+rmse_best<- sqrt(mean((pred_best -test_data1$mpg)^2))
+mae_best<- mean(abs(pred_best- test_data1$mpg))
+rmse_best
+mae_best
+```
+
+# SVM CLASSIFICATION
+```{r}
+data(iris)
+set.seed(123)
+ train_data2<-createDataPartition(
+   iris$Species, p=0.8, list = FALSE)
+ 
+ train<-iris[train_data2, ]
+ test<-iris[-train_data2, ]
+ 
+ svm_classifier<-svm(
+   Species~.,
+   data=train,
+   kernel="radial"
+   
+ )
+ 
+ pred_class<- predict(
+   svm_classifier, test
+ )
+ confusionMatrix(pred_class, test$Species)
+```
+
+- TP = true positive for that class.
+
+- TN = true negative for that class.
+
+- FP = false positive for that class.
+
+- FN = false negative for that class.
+
+- N = total number of samples.
+
+- Sensitivity: TP / (TP + FN). Of all real members of this class, how many did the model catch?
+
+- Specificity: TN / (TN + FP). Of all real non-members, how many did the model correctly reject?
+
+- Pos Pred Value: TP / (TP + FP). When the model predicts this class, how often is it correct?
+
+- Neg Pred Value: TN / (TN + FN). When the model predicts “not this class,” how often is it correct?
+
+- Prevalence: (TP + FN) / N. How common is this class in the actual data?
+
+- Detection Rate: TP / N. What fraction of all samples are correctly predicted as this class?
+
+- Detection Prevalence: (TP + FP) / N. What fraction of all samples are predicted as this class, right or wrong?
+- Balanced Accuracy: (Sensitivity + Specificity) / 2. Fair average of catching real cases and avoiding false alarms.
+
+# explanation on results above
+- setosa: all metrics are 1.0000, so it is perfectly classified.
+
+- versicolor: Sensitivity = 1.0000, so all real versicolor were caught.
+
+- versicolor: Specificity = 0.9000, so some non-versicolor were wrongly called versicolor.
+
+- versicolor: Pos Pred Value = 0.8333, so only 83.33% of versicolor predictions were correct.
+
+- virginica: Sensitivity = 0.8000, so 20% of real virginica were missed.
+
+- virginica: Specificity = 1.0000, so no other class was wrongly called virginica.
+
+- virginica: Neg Pred Value = 0.9091, so some real virginica were predicted as “not virginica.”
+
+- Balanced Accuracy: setosa = 1.0000, versicolor = 0.9500, virginica = 0.9000.

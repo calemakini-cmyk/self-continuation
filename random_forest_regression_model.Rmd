@@ -1,0 +1,245 @@
+---
+title: "RANDOM FOREST REGRESSION MODEL"
+author: "MAKINI CALEB"
+date: "`r Sys.Date()`"
+output: html_document
+---
+             
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo        = TRUE,          # show the code in HTML
+  tidy        = TRUE,          # run formatR on the code
+  tidy.opts   = list(
+    comment     = FALSE,       # <-- STRIP "#" comments from displayed code
+    blank       = FALSE,       # drop blank lines
+    widthCutoff = 120          # keep long lines readable
+  ),
+  comment     = NA,            # hide the "##" prefix on output
+  warning     = FALSE,
+  message     = FALSE,
+  eval        = TRUE,
+  fig.align   = "center",
+  fig.width   = 10,
+  fig.height  = 6,
+  dpi         = 120,
+  dev         = "png",
+  fig.show    = "asis",
+  fig.keep    = "all",
+  out.width   = "100%"
+)
+                      
+```
+
+# SETTING A WORKING DIRECTORY
+```{r}
+ setwd("C:/Users/ADMIN/OneDrive/Desktop/caleb makini")
+
+```
+
+# loading libraries
+```{r}
+library(tidyverse)
+library(rio)
+library(ggplot2)
+library(psych)
+library(ggthemes)
+library(summarytools)
+library(tidyr)
+library(formatR)
+library(sjmisc)
+library(caret)
+library(report)
+library(knitr)
+library(randomForest)
+
+```
+
+
+# Random forest regression:
+- is a machine learning algorithm used to predict continous
+numerical values such as prices, income or temperature
+- works by creating many decision tree for anomous prediction
+
+# load built-in dataset
+## predict mpg( miles per gallon)
+```{r}
+data(mtcars)
+head(mtcars)
+```
+
+- the built-in mtcars
+
+
+# check structure
+```{r}
+str(mtcars)
+```
+
+# summary statistics
+```{r}
+describe(mtcars)
+```
+
+
+# check for missing values
+```{r}
+sum(is.na(mtcars))
+colSums(is.na(mtcars))
+```
+
+# split data into train and test
+```{r}
+set.seed(123)
+# craetion of train indices
+train_index<-createDataPartition(mtcars$mpg, p=.8, list=FALSE)
+# training data
+train_data<-mtcars[train_index, ]
+# testing data
+test_data<-mtcars[-train_index,]
+```
+
+# check the dimension
+```{r}
+dim(train_data)
+dim(test_data)
+```
+# Train random forest regression
+```{r}
+rf_model<- randomForest(
+  mpg~.,
+  data= train_data,
+  ntree=500,
+  mtry=3,
+  importance= TRUE
+)
+# view nmodel
+print(rf_model)
+```
+
+
+# make predictions using testing set
+```{r}
+predictions<-predict(rf_model, newdata=test_data)
+predictions
+```
+
+
+# evaluate model performance
+```{r}
+# RMSE
+rmse<-RMSE(predictions, test_data$mpg)
+# MAE
+mae<-MAE(predictions, test_data$mpg)
+# R-squared
+r2<-R2(predictions, test_data$mpg)
+# print results
+cat("RMSE",rmse,"\n")
+cat("MAE", mae,"\n")
+cat("R-squared",r2)
+```
+# variable importance
+```{r}
+importance(rf_model)
+# plot variable importance
+varImpPlot(rf_model)
+
+```
+
+
+# actual vs predicted plot
+```{r}
+plot(
+  test_data$mpg, 
+  predictions,
+  main="actual vs predicted",
+  xlab=" actual mpg",
+  ylab=" predicted mpg",
+  pch=19,
+  col="skyblue"
+)
+# add a reghression line
+abline(0, 1, col="red", lwd=2)
+```
+
+# predict mpg using new data
+```{r}
+# create a new sample car data
+new_car<-data.frame(
+  cyl=4,
+  disp=120,
+  hp=120,
+  drat=3.5,
+  wt= .8,
+  qsec=8,
+  vs= 2,
+  am=1,
+  gear=6,
+  carb=3
+  
+)
+# predict mpg
+cat("predicted mpg",predict(rf_model, newdata=new_car))
+```
+```{r}
+
+# 2. Predict mpg for the single new car
+single_prediction <- predict(rf_model, newdata = new_car)
+cat("Predicted MPG for new car:", single_prediction, "\n")
+
+# 3. Generate predictions on your validation/test set for the scatter plot
+# Replace 'test_data' with the actual name of your test dataset variable
+test_predictions <- predict(rf_model, newdata = test_data) 
+```
+
+
+
+# visualization on new car anhd actual data
+
+# predict mpg using new data
+# actual vs predicted plot
+```{r}
+plot(
+  x = test_predictions,          # Predicted values on the X-axis
+  y = test_data$mpg,             # Actual values from test data on the Y-axis
+  main = "Actual vs. Predicted MPG", 
+  xlab = "Predicted MPG", 
+  ylab = "Actual MPG", 
+  pch = 19, 
+  col = "skyblue")
+  # Add a 1:1 reference line
+abline(a = 0, b = 1, col = "red", lwd = 2)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

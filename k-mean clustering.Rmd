@@ -1,0 +1,112 @@
+---
+title: "K-mean clustering"
+author: "MAKINI CALEB"
+date: "`r Sys.Date()`"
+output: html_document
+---
+             
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo        = TRUE,          # show the code in HTML
+  tidy        = TRUE,          # run formatR on the code
+  tidy.opts   = list(
+    comment     = FALSE,       # <-- STRIP "#" comments from displayed code
+    blank       = FALSE,       # drop blank lines
+    widthCutoff = 120          # keep long lines readable
+  ),
+  comment     = NA,            # hide the "##" prefix on output
+  warning     = FALSE,
+  message     = FALSE,
+  eval        = TRUE,
+  fig.align   = "center",
+  fig.width   = 10,
+  fig.height  = 6,
+  dpi         = 120,
+  dev         = "png",
+  fig.show    = "asis",
+  fig.keep    = "all",
+  out.width   = "100%"
+)
+                      
+```
+
+# SETTING A WORKING DIRECTORY
+```{r}
+ setwd("C:/Users/ADMIN/OneDrive/Desktop/caleb makini")
+
+```
+
+
+# load libraries
+```{r}
+library(cluster)
+library(factoextra)
+library(dplyr)
+library(readxl)
+```
+
+# load data
+```{r}
+data<-read_excel("mall_customers.xlsx")
+head(data)
+```
+
+
+# structure of data
+```{r}
+str(data)
+```
+
+# select numerical features for clastering
+```{r}
+features <- data[, c("Age",
+                   "Annual_Income",
+                   "Spending_Score",
+                   "Average_Purchase_Value")]
+```
+
+
+```{r}
+# scale the data
+scaled_feature<-scale(features)
+```
+
+# determine the optimal number of clusters
+```{r}
+fviz_nbclust(scaled_feature,kmeans, method="wss")+
+  labs(title="Elbow method for optimal k(multi-feature_data")
+```
+
+
+
+# apply k-means clustering(setting k=3 based on typical clusters pattern)
+```{r}
+set.seed(42)
+k_optimal<-3
+kmean_results<-kmeans(scaled_feature, centers= k_optimal, nstart=25)
+```
+
+
+# view cluster sizes and centers
+```{r}
+print(kmean_results)
+```
+
+# append the clusters assignments back to the origina l data frame
+```{r}
+data$clusters <- as.factor(kmean_results$cluster)
+head(data)
+```
+
+
+
+# visualize the clasters
+```{r}
+fviz_cluster(kmean_results, data=scaled_feature,
+             pallete=c("red","blue", "yelow"),
+             geom="point",
+             ellipse.type = "convex",
+             ggtheme=theme_minimal(),
+             main="Clusters(5- Feature model visualized via PCA)")
+```
+

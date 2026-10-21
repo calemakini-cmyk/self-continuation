@@ -1,0 +1,235 @@
+---
+title: "PRINCIPAL COMPONENT ANALYSIS (PCA)"
+subtitle: "Unsupervised Machine Learning Models"
+author: "MAKINI CALEB"
+date: "`r Sys.Date()`"
+output: html_document
+---
+             
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo        = TRUE,          # show the code in HTML
+  tidy        = TRUE,          # run formatR on the code
+  tidy.opts   = list(
+    comment     = FALSE,       # <-- STRIP "#" comments from displayed code
+    blank       = FALSE,       # drop blank lines
+    widthCutoff = 120          # keep long lines readable
+  ),
+  comment     = NA,            # hide the "##" prefix on output
+  warning     = FALSE,
+  message     = FALSE,
+  eval        = TRUE,
+  fig.align   = "center",
+  fig.width   = 10,
+  fig.height  = 6,
+  dpi         = 120,
+  dev         = "png",
+  fig.show    = "asis",
+  fig.keep    = "all",
+  out.width   = "100%"
+)
+                      
+```
+
+# SETTING A WORKING DIRECTORY
+```{r}
+ setwd("C:/Users/ADMIN/OneDrive/Desktop/caleb makini")
+
+```
+
+
+# load libraries
+```{r}
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(ggthemes)
+library(psych)
+library(sjmisc)
+library(kableExtra)
+library(knitr)
+library(tidyr)
+library(reshape2)
+library(formatR)
+library(corrplot)
+library(e1071)
+library(caret)
+library(Metrics)
+library(xgboost)
+library(readxl)
+
+
+```
+# Explanation
+##  No Target Variable(There is no Prediction)
+- goal: the main goal of unsupervised machine learning is to reduce dimension(dimension reduction using pca) and classify the variables into groups or clusters using k-means clustering
+
+# load the dataset
+```{r}
+data<-read_excel("PCA data.xlsx")
+head(data)
+```
+
+
+# confirm names
+```{r}
+names(data)
+
+```
+
+# check data structure
+```{r}
+str(data)
+```
+# check number of rows and columns
+```{r}
+dim(data)
+cat("NO of rows:",nrow(data),"\n","No of columns:",ncol(data))
+```
+# summary statistics
+```{r}
+summary(data)
+```
+
+# check missing values and dupliccates
+## check missing values
+```{r}
+sum(is.na(data))
+colSums((is.na(data)))
+```
+
+# check for duplicated rows
+```{r}
+sum(duplicated(data))
+```
+# examine the correlation
+```{r}
+# correlation matric
+correlation<-cor(data)
+# display correlation values
+round(correlation, 2)
+# visualize correlation
+corrplot(
+  correlation,
+  method="color",
+  type="upper",
+  addCoef.col="yellowgreen"
+)
+```
+
+## why check correlation?
+- purpose: to seee which variables are related,. PCA is particulalry useful when variables share overlapping information.
+
+
+# standardize the variable
+```{r}
+data_scaled<-scale(data)
+
+# check the means
+cat("The mean of standardized data.:\n")
+round(colMeans(data_scaled), 2)
+# check standardization deviation
+cat("The sd of standardized data.:\n")
+round(apply(data_scaled, 2, sd, 2))
+```
+
+# perform pca
+```{r}
+pca_results<-prcomp(
+  data,
+  center=TRUE,
+  scale.=TRUE,
+)
+summary(pca_results)
+```
+
+# component loading
+```{r}
+pca_results$rotation
+head(pca_results$x)
+```
+
+# PURPOSE: 
+- THIS CREATES NEW VARIABLES 
+```{r}
+#  Eigenvalues (variance of each PC)
+eigenvalues <- pca_results$sdev^2
+
+#  % variance explained
+variance   <- eigenvalues / sum(eigenvalues) * 100
+
+# 4. Cumulative % variance
+cumulative <- cumsum(variance)
+
+#  Build the table
+results <- data.frame(
+  component           = paste0("pc", seq_along(eigenvalues)),
+  Eigenvalue          = round(eigenvalues, 3),
+  Variance_percentage = round(variance, 2),
+  Cumulative_percent  = round(cumulative, 2)
+)
+print(results)
+```
+
+
+# draw the  scree plot
+```{r}
+plot(
+  eigenvalues,
+  type="b",
+  pch=19,
+  xlab=" Principal Component",
+  ylab="Eigenvalues",
+  main="PCA Scree plot"
+)
+abline(h=1, lty=2, col="red",lwd=1)
+```
+
+
+# select number of components
+```{r}
+# using cumulative variance
+number_compopnents<-which(cumulative>=80)[1]
+cat("components retained:", number_compopnents,"\n")
+cat("cummulative variance explained:", 
+    round(cumulative[number_compopnents],2),"%")
+```
+
+# interplet component loadings
+```{r}
+loadings<-pca_results$rotation[
+  , 1:number_compopnents,
+  drop=FALSE
+]
+round(loadings*100, 3)
+```
+
+# Attain the main goal of pca
+## reduce dataset from 10 original variables to the number of components selected
+# extract the retained compobnents
+```{r}
+reduced_data<-as.data.frame(
+  pca_results$x[
+    ,1:number_compopnents,
+    drop=FALSE
+  ]
+)
+head(reduced_data)
+```
+
+
+# check new dimension of data set]
+```{r}
+dim(reduced_data)
+```
+
+# save the reduced data set
+```{r}
+library(writexl)
+write.csv(
+  reduced_data,
+  "PCA_Reduced_Datase.xlsx",
+  row.names=FALSE
+)
+```
+

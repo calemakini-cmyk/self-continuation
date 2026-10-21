@@ -1,0 +1,251 @@
+---
+title: "day 5, session 6, correlation and regression analysis"
+author: "MAKINI CALEB"
+date: "`r Sys.Date()`"
+output: html_document
+---
+             
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo        = TRUE,          # show the code in HTML
+  tidy        = TRUE,          # run formatR on the code
+  tidy.opts   = list(
+    comment     = FALSE,       # <-- STRIP "#" comments from displayed code
+    blank       = FALSE,       # drop blank lines
+    widthCutoff = 120          # keep long lines readable
+  ),
+  comment     = NA,            # hide the "##" prefix on output
+  warning     = FALSE,
+  message     = FALSE,
+  eval        = TRUE,
+  fig.align   = "center",
+  fig.width   = 10,
+  fig.height  = 6,
+  dpi         = 120,
+  dev         = "png",
+  fig.show    = "asis",
+  fig.keep    = "all",
+  out.width   = "100%"
+)
+                      
+```
+
+
+# setting a working directory
+```{r}
+setwd("C:/Users/ADMIN/OneDrive/Desktop/caleb makini")
+```
+
+# loading libraries
+
+```{r}
+library(dplyr)
+library(tidyverse)
+library(ggplot2)
+library(rio)
+```
+
+
+# import file
+
+```{r}
+npk<-read.csv("gsssubset.csv")
+head(npk)
+```
+
+
+
+
+
+# correlation and regression analysis
+
+### defn: correlation; measure the strength and direction of linear rltship btn  2 var
+
+
+# correlation analysis
+```{r}
+
+dataset<-data.frame(
+x=c(1:5),
+y=c(2, 4, 5, 7, 6)
+)
+head(dataset)
+
+```
+
+
+# pearson correlation 
+
+```{r}
+pearson_corr<-cor.test(dataset$x, dataset$y, method="pearson")
+print(paste("pearson correlation:",pearson_corr))
+```
+
+
+# There is strong correlation btn x and y
+
+
+
+# is association significant?
+
+# test significance of pearson_correlation
+
+# HO: 
+# H1:
+
+```{r}
+pearson_corr_test<-cor.test(dataset$x, dataset$y, method="pearson")
+print(pearson_corr_test)
+```
+
+
+- since the p-value<5%, we reject the null hypontesis nad conclude that hence their exist relation is significant btn x and y
+
+
+
+# spearman correlation 
+
+```{r}
+spearman_corr<-cor.test(dataset$x, dataset$y, method="spearman")
+print(paste("spearman correlation:",pearson_corr))
+```
+
+# strong positive correlation
+
+## is the rel;ationship significant?
+
+```{r}
+spearman_corr_test<-cor.test(dataset$x, dataset$y, method="spearman")
+print(spearman_corr_test)
+```
+- since te p-value > 5%, we fail to reject the nul hypothesis and conclude that there is no significant difference between x an y valuables
+
+
+
+
+
+# regression analysis
+
+
+# defn: regression; rltshp btn independent $ dependent variables
+
+## simple linear regration
+```{r}
+model<-lm(y~x,data=dataset)
+summary(model)
+```
+
+
+
+- a unit increase in variable x increses variable y by 1.1unit, and effect is significant since the p-value <5%
+
+- var X, explains variabvle y by 81,76% but the remainingpercentage is explained by other factors not in our model
+
+
+# read data series
+
+
+
+# muiltiple linear regression
+
+```{r}
+data1<-data.frame(
+  y=c(2, 4, 5, 4, 6),
+  x1=c(1:5),
+  x2=c(3,5, 7, 6, 8)
+)
+model1<-lm(y~x1+x2, data=data1)
+summary(model1)
+```
+
+
+- a unit increase in x1, decreases y by 0.1778
+- a unit increase in x2, increases y by 0.8889 
+
+
+- var X1 and x2, explains variabvle y by  0.9697 but the remainingpercentage is explained by other factors not in our model
+
+# check whether model1 is significance
+
+
+# model diagnosis
+
+```{r}
+par(mfrow<-c(1,2)) # setting up 1 by 1 plot layout
+
+plot(model1)
+```
+
+
+
+# import data set
+
+
+
+
+```{r}
+nck<-read.csv("gsssubset.csv")
+head(nck)
+```
+
+
+
+# Calculate pearson correlartion
+
+
+
+```{r}
+pearson_test<-cor.test(nck$income, nck$hrswrk, method="pearson")
+print(paste("pearson correlation:",pearson_test))
+```
+
+
+# testing significance
+
+```{r}
+pearson_test_sign<-cor.test(nck$income, nck$hrswrk, method="pearson")
+print(pearson_test_sign)
+```
+
+- since the p-value<5%, we  reject null analysis and conclude that there exist  significance between income and hours of work
+
+
+
+# select continous var
+
+
+
+```{r}
+nck_selected<-nck %>% 
+   select(hrswrk,age, weight, income, height )
+cor(nck_selected)
+```
+
+# a correlation matrix
+
+# test significance
+
+# testing significance
+
+
+
+
+# regression analysis
+
+```{r}
+model2<-lm(income~age+height+weight+hrswrk, data=nck)
+summary(model2)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+

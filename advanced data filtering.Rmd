@@ -1,0 +1,254 @@
+---
+title: "advanced data  format session 2"
+author: "MAKINI Caleb"
+date: "`r Sys.Date()`"
+output: html_document
+---
+             
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo        = TRUE,          # show the code in HTML
+  tidy        = TRUE,          # run formatR on the code
+  tidy.opts   = list(
+    comment     = FALSE,       # <-- STRIP "#" comments from displayed code
+    blank       = FALSE,       # drop blank lines
+    widthCutoff = 120          # keep long lines readable
+  ),
+  comment     = NA,            # hide the "##" prefix on output
+  warning     = FALSE,
+  message     = FALSE,
+  eval        = TRUE,
+  fig.align   = "center",
+  fig.width   = 10,
+  fig.height  = 6,
+  dpi         = 120,
+  dev         = "png",
+  fig.show    = "asis",
+  fig.keep    = "all",
+  out.width   = "100%"
+)
+                      
+```
+
+
+
+# setting a working directory
+```{r}
+setwd("C:/Users/ADMIN/OneDrive/Desktop/caleb makini")
+```
+
+
+# load libraris
+
+```{r}
+library(dplyr)
+library(tidyverse)
+library(ggplot2)
+```
+
+# import data
+
+```{r}
+gss<- read.csv("gsssubset.csv")
+head(gss)
+```
+
+
+# double filter filtering
+# single filter
+
+```{r}
+single_filtered<-gss %>% 
+  filter(marital=="MARRIED")
+head(single_filtered)
+```
+
+
+# double filter
+
+```{r}
+double_filtered<-gss %>% 
+  filter(marital=="MARRIED"|
+           marital=="DIVORCED")
+head(double_filtered)
+```
+
+
+
+
+# multiple filtering
+```{r}
+gss_degree <- gss %>%
+  filter(
+    degree %in% c("BACHELOR", "GRADUATE", "JUNIOR COLLEGE"),
+    marital %in% c("MARRIED", "DIVORCED"),
+    sex %in% c("MALE"),
+  
+    )
+  
+
+head(gss_degree)
+```
+
+
+
+# data format
+# long/wide format
+
+# sample data set
+```{r}
+grades_wide<- tibble(
+  student=c("alice", "Bob", "charlie"),
+  math_2023=c(85, 92, NA),
+  math_2024=c(88, 90, 85),
+  science_2023=c(78, NA, 80),
+  science_2024=c(82, 85, 88)
+  
+)
+head(grades_wide)
+```
+
+# pivot_longer
+- its purpose is to reduce the number of columns while keeping original info
+```{r}
+grades_long<-grades_wide |>
+  pivot_longer(
+    cols=-student,
+    names_to=c("subject", "year"),
+    names_sep="_",
+    values_to="score",
+   
+  )
+head(grades_long)
+```
+
+
+
+
+# pivot wider> long to wide format
+```{r}
+grades_wide_back<- grades_long %>% 
+  pivot_wider(
+    names_from=c("subject", "year"),
+    names_sep="_",
+    values_from=score
+  )
+head(grades_wide_back)
+```
+
+
+
+# advanced joints
+```{r}
+df1<-tibble(
+  id=c(1, 2, 3, 4),
+  name=c("alice", "Bob", "charlie","David"))
+
+df2<-tibble(
+  id=c(2, 3, 5),
+  score=c(85,90, 78)
+)
+```
+
+
+# join types
+# inner_join(): common matching keys, unique
+
+```{r}
+inner_join(df1, df2, by="id")
+```
+
+
+
+# full_join()
+```{r}
+full_join(df1, df2, by="id")
+```
+
+
+
+# semi-join
+```{r}
+semi_join(df1, df2, by="id")
+semi_join(df2, df1, by="id")
+```
+
+
+
+# anti_join()
+```{r}
+anti_join(df1, df2, by="id")
+```
+
+
+
+# left_join()
+```{r}
+left_join(df1, df2, by="id")
+```
+
+
+
+# right_join()
+```{r}
+right_join(df1, df2, by="id")
+```
+
+
+
+
+
+# join function using real data sets
+
+# load data sets
+
+```{r}
+inv_1<-read.csv("inv_1.csv")
+inv_2<-read.csv("inv_2.csv")
+head(inv_1)
+head(inv_2)
+```
+
+# comined inventory by 🆔 
+```{r}
+combined_inv <-full_join(inv_1, inv_2, by="Product_ID") 
+head(combined_inv)
+```
+
+```{r}
+# combined_inv$Sale_Date <- as.Date(combined_inv$Sale_Date)
+```
+
+
+# transform data
+```{r}
+
+combined_inv$Category <- as.factor(combined_inv$Category)
+combined_inv$Region <- as.factor(combined_inv$Region)
+head(combined_inv, 10)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,193 @@
+---
+title: "XGBoost Classification model"
+author: "MAKINI CALEB"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+             
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo        = TRUE,          # show the code in HTML
+  tidy        = TRUE,          # run formatR on the code
+  tidy.opts   = list(
+    comment     = FALSE,       # <-- STRIP "#" comments from displayed code
+    blank       = FALSE,       # drop blank lines
+    widthCutoff = 120          # keep long lines readable
+  ),
+  comment     = NA,            # hide the "##" prefix on output
+  warning     = FALSE,
+  message     = FALSE,
+  eval        = TRUE,
+  fig.align   = "center",
+  fig.width   = 10,
+  fig.height  = 6,
+  dpi         = 120,
+  dev         = "png",
+  fig.show    = "asis",
+  fig.keep    = "all",
+  out.width   = "100%"
+)
+                      
+```
+
+# SETTING A WORKING DIRECTORY
+```{r}
+ setwd("C:/Users/ADMIN/OneDrive/Desktop/caleb makini")
+
+```
+
+# loading libraries
+```{r}
+library(xgboost)
+library(rio)
+library(caret)
+library(ggplot2)
+library(dplyr)
+library(rio)
+library(pROC)
+```
+
+
+## LOAD DATA SET
+```{r}
+health_data<- read.csv("diabetes.csv")
+head(health_data)
+```
+# check for missing values
+```{r}
+health_data<-na.omit(health_data)
+colSums((is.na(health_data)))
+```
+
+
+
+# confirm for missing values
+```{r}
+colSums((is.na(health_data)))
+```
+
+# structure
+```{r}
+str(health_data)
+table(health_data$diabetes)
+```
+
+
+### convert categorical variables into factor
+```{r}
+health_data$diabetes<-as.factor(health_data$diabetes)
+```
+
+
+## split thye data set
+```{r}
+set.seed(123)
+trainIndexed<- createDataPartition(
+  health_data$diabetes,
+  p=0.8, list=FALSE
+)
+train<-health_data[trainIndexed, ]
+test<- health_data[- trainIndexed, ]
+```
+
+
+## one hot encoding variables
+```{r}
+dummy<-dummyVars(diabetes~., data=train)
+train_x<-predict(dummy, train)
+test_x<-predict(dummy, test)
+train_y<-as.numeric(as.character(train$diabetes))
+test_y<-as.numeric(as.character(test$diabetes))
+```
+
+
+# create dmatrix
+```{r}
+dtrain<-xgb.DMatrix(
+  data=train_x,
+  label=train_y
+)
+dtest<-xgb.DMatrix(
+  data=test_x,
+  label=test_y
+)
+```
+
+
+# train xgboost model
+```{r}
+params<-list(
+  objective="binary:logistic",
+  eval_metric="logloss",
+  max_depth=4, eta=0.10,
+  subsample=0.8, colsample_bytree=0.8
+)
+xgb_model<-xgb.train(params=params, data=dtrain, nrounds=100,
+                     watchlist=list(train=dtrain), verbose=1)
+```
+
+### make predictions
+```{r}
+make_predictions<-predict(
+  xgb_model, dtest
+)
+predictions<-ifelse(
+  make_predictions>0.5,
+  1,
+  0
+)
+```
+
+
+# confusion matrix
+```{r}
+confusionMatrix(
+  factor(predictions),
+  factor(test_y)
+)
+```
+- The Confusion Matrix (The Raw Numbers)A confusion matrix compares what the model predicted against the actual reference truth. 
+The dataset has 219 total samples, split by the model like this:
+True Positives (122): 
+The actual class was 0, and the model correctly predicted 0.
+True Negatives (95): The actual class was 1, 
+and the model correctly predicted 1.False Positives (2):
+The actual class was 1, but the model incorrectly guessed 0.False Negatives (0): The actual class was 0, and the model never missed it.
+- Overall Model Performance MetricsThese metrics evaluate how well the model works as a whole across all data points: Accuracy (99.09%): The overall success rate. The model guessed correctly 217 out of 219 times. 95% Confidence Interval (96.74%, 99.89%): A statistical range. If you ran this model on new, identical distributions of data, you can be 95% confident the accuracy would fall between these two percentages. No Information Rate / NIR (55.71%): The accuracy you would get by blindly guessing the majority class (Class 0) every single time. P-Value [Acc > NIR] (< 2e-16): A measure of statistical significance. Because it is essentially zero, it proves your model’s high accuracy is due to genuine predictive power, not random luck. Kappa (0.9815): Measures agreement between predictions and reality, adjusted for chance. A score above 0.80 is considered excellent; 0.98 indicates near-perfect reliability. McNemar's Test P-Value (0.4795): Checks if the model's errors are heavily biased toward one type of mistake over another. A high p-value (greater than 0.05) means your small number of misclassifications (just 2 errors) are statistically balanced.
+- Class-Specific Metrics (Class 0 as 'Positive')Because Class 0 is designated as the target "Positive" class, the performance breaks down into specific dimensions of accuracy: Sensitivity / Recall (100.00%): Out of all actual Class 0 cases in the data, the model found every single one. It missed zero positive cases.Specificity (97.94%): Out of all actual Class 1 cases, the model correctly identified 97.94% of them. It only misclassified two.Balanced Accuracy (98.97%): The average of Sensitivity and Specificity. It gives an honest view of performance when classes are unevenly split.Positive Predictive Value / Precision (98.39%): When the model claims a sample is Class 0, it is right 98.39% of the time.Negative Predictive Value (100.00%): When the model claims a sample is Class 1, it is right every single time.
+-Data Split & PrevalencePrevalence (55.71%): The actual proportion of Class 0 in your entire dataset (\(122/219\)).Detection Rate (55.71%): The rate at which the model successfully found true positives relative to the total dataset size.Detection Prevalence (56.62%): The total proportion of the dataset that the model claimed belonged to Class 0, regardless of whether it was right or wrong (\(124/219\)).
+- Formatting Styles ExplainedWhen putting this data into a final report, the writing changes drastically based on who is reading it: Academic / APA Style: Written for researchers, peer reviews, or journals. It relies heavily on parenthetical statistics, technical terminology, and exact numerical representations (e.g., “The classifier demonstrated a significant improvement over the baseline No Information Rate, χ²... p < .001...”). Business / Executive Style: Written for project stakeholders, managers, or clients. It strips away technical jargon (like Kappa or McNemar's) and frames the numbers around risk and operational reliability (e.g., “Our system operates at a 99.09% success rate. Crucially, it has a 0% fail-miss rate for Class 0, meaning no critical targets are bypassed...”). 
+
+### ROC_CURVE
+```{r}
+roc_curve<-roc(
+test_y,
+make_predictions
+)
+plot(
+roc_curve,
+col="skyblue",
+main="Roc Curve"
+)
+
+```
+
+
+
+
+# visualize diabetes
+```{r}
+ggplot(
+  health_data,
+  aes(x=factor(diabetes)))+
+  geom_bar(fill="yellowgreen")+
+  labs(
+    title="Diustribution of diabetes",
+    x="Diabetes",
+    y=" Frequency"
+  )
+
+```
+
+

@@ -1,0 +1,312 @@
+---
+title: "PRINCIPAL COMPONENT ANALYSIS (PCA)"
+author: "CANON TUMWET"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+# Set working directory
+```{r}
+setwd("D:/CANON/Intermediate R")
+```
+
+# Unsupervised Machine learning models
+## No target variable (There is no prediction)
+## The main goal of unsupervised machine learning is to; 
+### Reduce dimension (dimension reduction) using PCA 
+### Classify the variables into groups or clusters using K-Means clustering
+
+
+# Load libraries
+```{r}
+library(ggplot2)
+library(tidyverse)
+library(dplyr)
+library(readxl)
+library(corrplot)
+```
+
+
+# Import the Excel dataset
+```{r}
+data <- read_excel("PCA data.xlsx")
+head(data)
+```
+
+
+## Understand the data
+# Check data structure
+```{r}
+str(data)
+```
+
+
+# Number of rows and columns
+```{r}
+dim(data)
+```
+
+
+# Variable names
+```{r}
+names(data)
+```
+
+
+# Summary statistics
+```{r}
+summary(data)
+```
+
+
+## Check missing values and duplicates
+# Missing values in each column
+```{r}
+colSums(is.na(data))
+```
+
+
+# Duplicate rows
+```{r}
+sum(duplicated(data))
+```
+
+
+## Examine correlations
+```{r}
+# Correlation matrix
+correlation <- cor(data)
+
+# Display correlation values
+round(correlation, 2)
+
+# Visualise correlations
+corrplot(
+  correlation,
+  method = "color",
+  type = "upper",
+  addCoef.col = "black"
+)
+```
+
+Purpose: To see which variables are related. PCA is particularly useful when variables share overlapping information.
+
+## Standardise the variables
+```{r}
+data_scaled <- scale(data)
+
+# Check the means
+round(colMeans(data_scaled), 2)
+
+# Check standard deviations
+round(apply(data_scaled, 2, sd), 2)
+```
+
+Purpose: The variables use different scales. Standardisation gives each variable a mean of approximately zero and a standard deviation of one.
+
+
+# Perform PCA
+```{r}
+pca_result <- prcomp(
+  data,
+  center = TRUE,
+  scale. = TRUE
+)
+summary(pca_result)
+```
+
+# Component loadings
+```{r}
+pca_result$rotation
+head(pca_result$x)
+```
+
+Purpose: This creates new variables called principal components. Each component combines information from the original 10 variables.
+
+
+## Determine explained variance
+# Eigenvalues
+```{r}
+eigenvalues <- pca_result$sdev^2
+```
+
+
+# Percentage of variance explained
+```{r}
+variance <- eigenvalues / sum(eigenvalues) * 100
+```
+
+
+# Cumulative percentage
+```{r}
+cumulative <- cumsum(variance)
+```
+
+
+# Results table
+```{r}
+results <- data.frame(
+  Component = paste0("PC", 1:10),
+  Eigenvalue = round(eigenvalues, 3),
+  Variance_Percent = round(variance, 2),
+  Cumulative_Percent = round(cumulative, 2)
+)
+
+print(results)
+```
+
+Purpose: To determine how much of the original variation each component explains and how much is retained when components are combined.
+
+## Draw the scree plot
+```{r}
+plot(
+  eigenvalues,
+  type = "b",
+  pch = 19,
+  xlab = "Principal Component",
+  ylab = "Eigenvalue",
+  main = "PCA Scree Plot"
+)
+abline(h = 1, lty = 2, col = "red")
+```
+
+Purpose: Look for the point where the curve begins to flatten. This helps you decide how many components to retain.
+
+
+## Select the number of components
+# We will use a cumulative variance target of at least 80%.
+```{r}
+number_components <- which(cumulative >= 80)[1]
+
+cat("Components retained:", number_components)
+
+cat(
+  "\nCumulative variance explained:",
+  round(cumulative[number_components], 2),
+  "%"
+)
+```
+
+The code selects the minimum number of components that reaches 80%.
+
+## Interpret component loadings
+```{r}
+loadings <- pca_result$rotation[
+  , 1:number_components,
+  drop = FALSE
+]
+
+round(loadings, 3)
+```
+
+# Look for variables with relatively large absolute loadings within each component. For example, if study hours, attendance, and examination scores load strongly on one component, it might represent an academic engagement dimension.
+
+
+## Attain the main goal of PCA
+# Reduce the dataset from 10 original variables to the number of components selected.
+# Extract the retained components
+```{r}
+reduced_data <- as.data.frame(
+  pca_result$x[
+    , 1:number_components,
+    drop = FALSE
+  ]
+)
+
+head(reduced_data)
+```
+
+
+# Check the new dimensions
+```{r}
+dim(reduced_data)
+```
+
+# Save the reduced dataset
+```{r}
+write.csv(
+  reduced_data,
+  "PCA_Reduced_Dataset.csv",
+  row.names = FALSE)
+```
+
+
+This is the main outcome: you now have a smaller dataset represented by principal components, with at least 80% of the original variance retained according to your selected rule.
+
+## Visualise the first two components
+```{r}
+plot(
+  pca_result$x[, 1],
+  pca_result$x[, 2],
+  xlab = "Principal Component 1",
+  ylab = "Principal Component 2",
+  main = "PCA: Student Observations",
+  pch = 19
+)
+```
+
+
+# Students with similar component scores appear closer together in the plot.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

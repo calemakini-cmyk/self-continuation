@@ -1,0 +1,43 @@
+---
+title: "data visualization"
+author: "MAKINI CALEB"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# setting a working directory
+```{r}
+setwd("C:/Users/ADMIN/OneDrive/Desktop/caleb makini")
+ 
+```
+
+
+# loading  libraries
+```{r}
+library(dplyr)
+library(ggthemes)
+library(tidyverse)
+library(rio)
+library(ggplot2)
+```
+
+
+# load data
+```{r}
+data<-read.csv("gsssubset.csv")
+```
+
+
+
+
+
+
+
+
+
+
+
