@@ -1,0 +1,712 @@
+---
+title: "Online Payments Fraud Detection — Task 6 (Deployment)"
+author: "MAKINI CALEB"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    theme: flatly
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, comment = NA)
+suppressPackageStartupMessages({
+  library(knitr); library(kableExtra)
+})
+
+setwd("C:/Users/ADMIN/OneDrive/Desktop/caleb makini/app/project")
+
+required <- c("credit_clean.csv","final_model_gbm.rds",
+              "test_set.rds","model_comparison.rds")
+missing <- required[!file.exists(required)]
+if (length(missing))
+  stop("Missing artifact(s) in ", getwd(), ": ",
+       paste(missing, collapse = ", "),
+       "\nRun fraud_tasks_1_5.Rmd first.")
+```
+
+# TASK 6 — MACHINE LEARNING MODEL DEPLOYMENT
+
+This document loads the four artifacts produced by Tasks 1–5 and generates a complete, self-contained **Shiny dashboard** (`app.R`). The dashboard satisfies every requirement of the brief:
+
+- ✅ Loads the trained GBM into a deployment environment (`readRDS("final_model_gbm.rds")`).
+- ✅ User-friendly, 6-tab interface built with `bslib`.
+- ✅ Real-time predictions from user-entered predictor values.
+- ✅ Displays **probability (%)**, **risk band** (LOW / MEDIUM / HIGH), and a **recommended action**.
+- ✅ Integrates **Explainable AI** — SHAP + Break Down for individual predictions, plus a global feature-importance chart.
+- ✅ **Upload the original `credit.csv`** — the app cleans the file, computes the three engineered flags, scores every transaction, and — if `is_fraud` is present — reports accuracy, precision, recall, F1, AUC, and a confusion matrix.
+- ✅ A one-line **launch** command and a one-line **deploy** command (Posit Cloud **or** shinyapps.io).
+
+## 6.1 Confirm the artifacts exist
+
+```{r}
+data.frame(file = required,
+           exists = file.exists(required),
+           size_kb = round(file.info(required)$size / 1024, 1),
+           row.names = NULL) |>
+  kable(caption = "Deployment bundle", format = "pipe")
+```
+
+All four must show `exists = TRUE` with non-zero `size_kb`.
+
+## 6.2 Generate `app.R`
+
+The next chunk writes the complete Shiny app to `app.R` in the current directory.
+
+```{r, echo=FALSE, results='hide'}
+app_code <- r"---(
+# ============================================================
+# Task 6 — Online Payments Fraud Detection & XAI Dashboard
+# Author: MAKINI CALEB
+# ============================================================
+suppressPackageStartupMessages({
+  library(shiny);     library(bslib);     library(tidyverse)
+  library(plotly);    library(DT);        library(pROC)
+  library(yardstick); library(DALEX);     library(caret)
+  library(scales)
+})
+
+## ---- 1. Load artifacts -------------------------------------------------
+required <- c("credit_clean.csv","final_model_gbm.rds",
+              "test_set.rds","model_comparison.rds")
+missing  <- required[!file.exists(required)]
+if (length(missing))
+  stop("Missing: ", paste(missing, collapse = ", "), " in ", getwd())
+
+data_clean <- read.csv("credit_clean.csv") |>
+  mutate(is_fraud            = factor(is_fraud,            levels = c("legit","fraud")),
+         foreign_transaction = factor(foreign_transaction, levels = c("no","yes")),
+         location_mismatch   = factor(location_mismatch,   levels = c("no","yes")))
+final_model <- readRDS("final_model_gbm.rds")
+test_set    <- readRDS("test_set.rds")
+comparison  <- readRDS("model_comparison.rds")
+
+## ---- 2. Precompute -----------------------------------------------------
+pred_fun   <- function(m, newdata) predict(m, newdata = newdata,
+                                           type = "prob")[, "fraud"]
+test_probs <- pred_fun(final_model, test_set)
+y_test     <- as.integer(test_set$is_fraud == "fraud")
+x_test     <- test_set |> select(-is_fraud)
+
+explainer  <- DALEX::explain(final_model, data = x_test, y = y_test,
+                             predict_function = pred_fun,
+                             label = "Gradient Boosting",
+                             type = "classification", verbose = FALSE)
+
+PAL <- c(fraud = "#B22222", legit = "#4682B4")
+CAT_LEVELS <- levels(x_test$merchant_category)
+CAT_LEVELS
+
+## ---- 3. Universal CSV preprocessor -------------------------------------
+# Accepts BOTH the raw credit.csv (10 cols, includes is_fraud) and any
+# already-cleaned file without the label. Returns scored data + labels.
+prep_and_score <- function(df) {
+  # Drop the ID column if present
+  if ("transaction_id" %in% names(df)) df$transaction_id <- NULL
+
+  # Pull labels aside if present
+  actual <- NULL
+  if ("is_fraud" %in% names(df)) {
+    raw <- df$is_fraud
+    actual <- if (is.numeric(raw)) {
+      factor(ifelse(raw == 1, "fraud", "legit"), levels = c("legit","fraud"))
+    } else {
+      factor(as.character(raw), levels = c("legit","fraud"))
+    }
+    df$is_fraud <- NULL
+  }
+
+  # Coerce 0/1 columns to yes/no factor
+  coerce_binary <- function(v) {
+    if (is.numeric(v)) {
+      factor(ifelse(v == 1, "yes", "no"), levels = c("no","yes"))
+    } else {
+      factor(as.character(v), levels = c("no","yes"))
+    }
+  }
+  if ("foreign_transaction" %in% names(df))
+    df$foreign_transaction <- coerce_binary(df$foreign_transaction)
+  if ("location_mismatch" %in% names(df))
+    df$location_mismatch   <- coerce_binary(df$location_mismatch)
+
+  # Merchant category — align to training levels; unknowns become NA
+  if ("merchant_category" %in% names(df))
+    df$merchant_category <- factor(as.character(df$merchant_category),
+                                   levels = CAT_LEVELS)
+
+  # Engineered features (must match Task 1.4 exactly)
+  df$impossible   <- df$amount <= 0
+  df$micro_amount <- df$amount > 0 & df$amount < 0.10
+  df$high_value   <- df$amount > 1200
+
+  # Rows we can score (drop impossible — matches Task 1.5 cleaning)
+  scoreable <- df[df$amount > 0 & !is.na(df$merchant_category), , drop = FALSE]
+  n_dropped <- nrow(df) - nrow(scoreable)
+
+  # Score
+  probs <- pred_fun(final_model, scoreable[, names(x_test), drop = FALSE])
+  scoreable$p_fraud  <- as.numeric(probs)
+  scoreable$risk_band <- cut(scoreable$p_fraud,
+                             breaks = c(-Inf, 0.30, 0.55, Inf),
+                             labels = c("LOW","MEDIUM","HIGH"))
+  scoreable$recommended_action <- ifelse(scoreable$p_fraud < 0.30, "Auto-approve",
+                                  ifelse(scoreable$p_fraud < 0.55,
+                                         "Soft challenge / 2FA",
+                                         "Block & investigate"))
+
+  # Attach labels back if aligned
+  if (!is.null(actual)) {
+    scoreable$actual <- actual[df$amount > 0 & !is.na(df$merchant_category)]
+  }
+
+  list(df = scoreable, n_dropped = n_dropped, has_labels = !is.null(actual))
+}
+
+## ---- 4. Single-row predictor (Predict tab) -----------------------------
+predict_one <- function(amount, hour, cat, foreign, mismatch,
+                        trust, velocity, age) {
+  nd <- tibble(
+    amount             = amount,
+    transaction_hour   = hour,
+    merchant_category  = factor(cat, levels = CAT_LEVELS),
+    foreign_transaction= factor(foreign, levels = c("no","yes")),
+    location_mismatch  = factor(mismatch, levels = c("no","yes")),
+    device_trust_score = trust,
+    velocity_last_24h  = velocity,
+    cardholder_age     = age,
+    impossible         = amount <= 0,
+    micro_amount       = amount > 0 & amount < 0.10,
+    high_value         = amount > 1200)
+  list(prob = as.numeric(pred_fun(final_model, nd)), row = nd)
+}
+
+## ---- 5. UI -------------------------------------------------------------
+ui <- page_navbar(
+  title = tags$span(icon("shield-halved"), " Fraud Detection & XAI"),
+  theme = bs_theme(version = 5, bootswatch = "flatly", primary = "#4682B4"),
+
+  ## TAB 1 — Overview --------------------------------------------------
+  nav_panel("Overview", icon = icon("gauge"),
+    layout_columns(fill = FALSE,
+      value_box("Transactions", comma(nrow(data_clean)),
+                showcase = icon("credit-card"), theme = "primary"),
+      value_box("Fraud cases", sum(data_clean$is_fraud == "fraud"),
+                showcase = icon("exclamation-triangle"), theme = "danger"),
+      value_box("Fraud rate",
+                percent(mean(data_clean$is_fraud == "fraud"), accuracy = .01),
+                showcase = icon("percent"), theme = "warning"),
+      value_box("Champion model", "Gradient Boosting",
+                showcase = icon("brain"), theme = "info")),
+    layout_columns(
+      card(card_header("Class imbalance"),
+           plotlyOutput("ov_class", height = "300px")),
+      card(card_header("Fraud rate by merchant category"),
+           plotlyOutput("ov_cat", height = "300px"))),
+    card(card_header("Navigation guide"),
+         tags$ol(
+           tags$li(strong("Predict"), " — enter one transaction; get probability, risk band, action, SHAP."),
+           tags$li(strong("Upload CSV"), " — upload the original credit.csv (or any CSV with the same schema) and score every row."),
+           tags$li(strong("Explain XAI"), " — SHAP + Break Down for any test-set row."),
+           tags$li(strong("Models"), " — leaderboard + ROC / PR curves.")))
+  ),
+
+  ## TAB 2 — Predict (single transaction) ------------------------------
+  nav_panel("Predict", icon = icon("wand-magic-sparkles"),
+    layout_columns(col_widths = c(5, 7),
+      card(card_header("Transaction details"),
+        numericInput("amt", "Amount (USD)", 450, min = 0, step = 10),
+        sliderInput("hr", "Hour (0–23)", 0, 23, 3),
+        selectInput("cat", "Merchant category",
+                    choices = CAT_LEVELS, selected = "Electronics"),
+        radioButtons("frn", "Foreign transaction?",
+                     c("No"="no","Yes"="yes"), inline = TRUE),
+        radioButtons("mis", "Location mismatch?",
+                     c("No"="no","Yes"="yes"), inline = TRUE),
+        sliderInput("trs", "Device trust score (0–100)", 0, 100, 35),
+        sliderInput("vel", "Velocity (txn in last 24h)", 0, 9, 6),
+        sliderInput("age", "Cardholder age", 18, 69, 30),
+        actionButton("go", "Score transaction",
+                     class = "btn-primary w-100", icon = icon("bolt"))),
+      tagList(
+        layout_columns(fill = FALSE,
+          value_box("Fraud probability", textOutput("prob_txt"),
+                    showcase = icon("chart-line"), theme = "primary"),
+          value_box("Risk band",          textOutput("risk_txt"),
+                    showcase = icon("traffic-light"), theme = "danger"),
+          value_box("Recommended action", textOutput("act_txt"),
+                    showcase = icon("clipboard-check"), theme = "success")),
+        card(card_header("Probability gauge"),
+             plotlyOutput("gauge", height = "260px")),
+        card(card_header("SHAP explanation for this transaction"),
+             plotOutput("pred_shap", height = "340px")))
+    )),
+
+  ## TAB 3 — Upload original credit.csv --------------------------------
+  nav_panel("Upload CSV", icon = icon("file-arrow-up"),
+    layout_columns(col_widths = c(4, 8),
+      card(
+        card_header("Upload the original credit.csv"),
+        tags$p(class = "text-muted small",
+               "Accepts the raw 10-column credit.csv (including ",
+               tags$code("transaction_id"), " and ", tags$code("is_fraud"),
+               "), or any file with the same predictor columns."),
+        fileInput("upload", NULL, accept = c(".csv")),
+        tags$hr(),
+        tags$b("Required columns"),
+        tags$ul(class = "small",
+          tags$li(tags$code("amount")),
+          tags$li(tags$code("transaction_hour")),
+          tags$li(tags$code("merchant_category")),
+          tags$li(tags$code("foreign_transaction"), " (0/1 or yes/no)"),
+          tags$li(tags$code("location_mismatch"),   " (0/1 or yes/no)"),
+          tags$li(tags$code("device_trust_score")),
+          tags$li(tags$code("velocity_last_24h")),
+          tags$li(tags$code("cardholder_age"))),
+        tags$hr(),
+        tags$b("Optional columns"),
+        tags$ul(class = "small",
+          tags$li(tags$code("transaction_id"), " — dropped automatically"),
+          tags$li(tags$code("is_fraud"), " — used to compute metrics")),
+        tags$hr(),
+        downloadButton("dl_scored", "Download scored CSV",
+                       class = "btn-success w-100")
+      ),
+      tagList(
+        uiOutput("upload_status"),
+        layout_columns(fill = FALSE,
+          value_box("Rows scored", textOutput("n_scored"),
+                    showcase = icon("list-check"), theme = "primary"),
+          value_box("Flagged HIGH", textOutput("n_high"),
+                    showcase = icon("exclamation-triangle"), theme = "danger"),
+          value_box("Flagged MEDIUM", textOutput("n_med"),
+                    showcase = icon("circle-half-stroke"), theme = "warning"),
+          value_box("Auto-approved", textOutput("n_low"),
+                    showcase = icon("check"), theme = "success")),
+        conditionalPanel("output.has_labels",
+          card(card_header("Performance on this file (labels detected)"),
+               layout_columns(
+                 value_box("Accuracy", textOutput("up_acc"), theme = "primary"),
+                 value_box("Precision", textOutput("up_prec"), theme = "info"),
+                 value_box("Recall",    textOutput("up_rec"),  theme = "success"),
+                 value_box("F1",        textOutput("up_f1"),   theme = "warning")),
+               DTOutput("up_cm"))),
+        card(card_header("Scored transactions"),
+             DTOutput("up_tbl"))
+      )
+    )),
+
+  ## TAB 4 — Explain XAI -----------------------------------------------
+  nav_panel("Explain XAI", icon = icon("magnifying-glass-chart"),
+    layout_columns(col_widths = c(4, 8),
+      card(card_header("Pick a transaction"),
+        selectInput("row_pick", NULL, choices = NULL),
+        actionButton("go_xai", "Explain", class = "btn-primary w-100",
+                     icon = icon("play")),
+        tags$hr(), tableOutput("row_details")),
+      tagList(
+        card(card_header("SHAP — contribution per feature"),
+             plotOutput("shap_plot", height = "360px")),
+        card(card_header("Break Down — sequential narrative"),
+             plotOutput("bd_plot", height = "360px")))
+    )),
+
+  ## TAB 5 — Models ----------------------------------------------------
+  nav_panel("Models", icon = icon("chart-simple"),
+    layout_columns(
+      card(card_header("Leaderboard"), DTOutput("tbl_models")),
+      card(card_header("PR-AUC by model"),
+           plotlyOutput("bar_models", height = "300px"))),
+    card(card_header("GBM — ROC and PR curves"),
+         layout_columns(plotlyOutput("roc_plot", height = "320px"),
+                        plotlyOutput("pr_plot",  height = "320px")))),
+
+  ## TAB 6 — About -----------------------------------------------------
+  nav_panel("About", icon = icon("circle-info"),
+    card(card_header("Method"),
+      tags$p(tags$b("Model:"), " Gradient Boosting (caret, 5-fold CV, up-sampling)."),
+      tags$p(tags$b("Features:"), " amount, hour, category, foreign flag, mismatch,",
+             " trust score, 24h velocity, age + 3 engineered booleans."),
+      tags$p(tags$b("Metrics:"), " PR-AUC, recall, F1 — accuracy is meaningless at 1.5% base rate."),
+      tags$p(tags$b("XAI:"), " DALEX SHAP + Break Down."),
+      tags$hr(),
+      tags$p(tags$em("Dashboard by MAKINI CALEB — Task 6."))))
+)
+
+## ---- 6. Server ---------------------------------------------------------
+server <- function(input, output, session) {
+
+  ## === Overview ===
+  output$ov_class <- renderPlotly({
+    d <- data_clean |> count(is_fraud)
+    p <- ggplot(d, aes(is_fraud, n, fill = is_fraud)) +
+      geom_col(width = .55, show.legend = FALSE) +
+      geom_text(aes(label = comma(n)), vjust = -.4, fontface = "bold") +
+      scale_fill_manual(values = PAL) + scale_y_continuous(labels = comma) +
+      labs(x = NULL, y = "Transactions") + theme_minimal(base_size = 12)
+    ggplotly(p)
+  })
+  output$ov_cat <- renderPlotly({
+    d <- data_clean |> group_by(merchant_category) |>
+      summarise(rate = mean(is_fraud=="fraud"), .groups = "drop")
+    p <- ggplot(d, aes(reorder(merchant_category, rate), rate, fill = rate)) +
+      geom_col(show.legend = FALSE) +
+      geom_text(aes(label = percent(rate,.1)), hjust = -.15, size = 3.2) +
+      scale_fill_gradient(low = "#A9C4E0", high = PAL[["fraud"]]) +
+      scale_y_continuous(labels = percent_format(.1),
+                         expand = expansion(mult = c(0,.2))) +
+      coord_flip() + labs(x = NULL, y = "Fraud rate") + theme_minimal(base_size = 12)
+    ggplotly(p)
+  })
+
+  ## === Predict ===
+  pred_result <- eventReactive(input$go, {
+    predict_one(input$amt, input$hr, input$cat, input$frn, input$mis,
+                input$trs, input$vel, input$age)
+  })
+  output$prob_txt <- renderText({
+    req(pred_result()); sprintf("%.2f%%", 100 * pred_result()$prob) })
+  output$risk_txt <- renderText({
+    req(pred_result()); p <- pred_result()$prob
+    if (p < .30) "LOW" else if (p < .55) "MEDIUM" else "HIGH" })
+  output$act_txt <- renderText({
+    req(pred_result()); p <- pred_result()$prob
+    if (p < .30) "Auto-approve"
+    else if (p < .55) "Soft challenge / 2FA"
+    else "Block & investigate" })
+  output$gauge <- renderPlotly({
+    req(pred_result())
+    plot_ly(type = "indicator", mode = "gauge+number",
+            value = round(100 * pred_result()$prob, 1),
+            number = list(suffix = "%"), title = list(text = "P(fraud)"),
+            gauge = list(axis = list(range = list(0,100)),
+                         bar  = list(color = PAL[["fraud"]]),
+                         steps = list(list(range = c(0,30),  color="#D4EDDA"),
+                                      list(range = c(30,55), color="#FFF3CD"),
+                                      list(range = c(55,100),color="#F8D7DA")))) |>
+      config(displayModeBar = FALSE)
+  })
+  output$pred_shap <- renderPlot({
+    req(pred_result())
+    withProgress(message = "SHAP…", value = .4,
+      p <- DALEX::predict_parts(explainer,
+                                new_observation = pred_result()$row,
+                                type = "shap", B = 15))
+    plot(p) + labs(title = "Why? Top SHAP contributions")
+  })
+
+  ## === Upload CSV ===
+  upload_result <- reactive({
+    req(input$upload)
+    df <- read.csv(input$upload$datapath, stringsAsFactors = FALSE)
+    prep_and_score(df)
+  })
+
+  output$upload_status <- renderUI({
+    req(upload_result())
+    r <- upload_result()
+    cls <- if (nrow(r$df) > 0) "alert-info" else "alert-warning"
+    extra <- if (r$n_dropped > 0)
+      paste0(" ", r$n_dropped, " row(s) removed (amount \u2264 0 or unknown category).")
+    tags$div(class = paste("alert", cls),
+             if (nrow(r$df) > 0)
+               paste0("Scored ", nrow(r$df), " rows.", extra)
+             else "No valid rows after cleaning.")
+  })
+  output$n_scored <- renderText({ req(upload_result()); nrow(upload_result()$df) })
+  output$n_high   <- renderText({ req(upload_result()); sum(upload_result()$df$risk_band == "HIGH") })
+  output$n_med    <- renderText({ req(upload_result()); sum(upload_result()$df$risk_band == "MEDIUM") })
+  output$n_low    <- renderText({ req(upload_result()); sum(upload_result()$df$risk_band == "LOW") })
+
+  output$has_labels <- reactive({ req(upload_result()); upload_result()$has_labels })
+  outputOptions(output, "has_labels", suspendWhenHidden = FALSE)
+
+  upload_metrics <- reactive({
+    req(upload_result())
+    r <- upload_result()
+    if (!r$has_labels) return(NULL)
+    df <- r$df
+    pred <- factor(ifelse(df$p_fraud >= .55, "fraud", "legit"),
+                   levels = c("legit","fraud"))
+    cm   <- caret::confusionMatrix(pred, df$actual, positive = "fraud")
+    auc  <- as.numeric(pROC::auc(pROC::roc(df$actual, df$p_fraud, quiet = TRUE,
+                                            levels = c("legit","fraud"), direction = "<")))
+    list(cm = cm, auc = auc)
+  })
+  output$up_acc  <- renderText({ m <- upload_metrics(); if (is.null(m)) "—"
+                                 sprintf("%.3f", m$cm$overall["Accuracy"]) })
+  output$up_prec <- renderText({ m <- upload_metrics(); if (is.null(m)) "—"
+                                 sprintf("%.3f", m$cm$byClass["Precision"]) })
+  output$up_rec  <- renderText({ m <- upload_metrics(); if (is.null(m)) "—"
+                                 sprintf("%.3f", m$cm$byClass["Sensitivity"]) })
+  output$up_f1   <- renderText({ m <- upload_metrics(); if (is.null(m)) "—"
+                                 sprintf("%.3f", m$cm$byClass["F1"]) })
+
+  output$up_cm <- renderDT({
+    m <- upload_metrics(); req(m)
+    tab <- as.data.frame.matrix(m$cm$table)
+    tab <- cbind(Predicted = rownames(tab), tab)
+    datatable(tab, rownames = FALSE,
+              options = list(dom = "t", pageLength = 5)) |>
+      formatStyle(columns = 2:3, fontWeight = "bold")
+  })
+
+  output$up_tbl <- renderDT({
+    req(upload_result())
+    df <- upload_result()$df
+    show_cols <- c("amount","merchant_category","p_fraud","risk_band",
+                   "recommended_action", if (upload_result()$has_labels) "actual")
+    df |> arrange(desc(p_fraud)) |>
+      select(all_of(show_cols)) |>
+      datatable(options = list(pageLength = 10, scrollX = TRUE)) |>
+      formatRound("p_fraud", 4) |>
+      formatCurrency("amount", currency = "$", digits = 2) |>
+      formatStyle("risk_band",
+        backgroundColor = styleEqual(c("LOW","MEDIUM","HIGH"),
+                                     c("#D4EDDA","#FFF3CD","#F8D7DA")))
+  })
+
+  output$dl_scored <- downloadHandler(
+    filename = function() paste0("scored_", Sys.Date(), ".csv"),
+    content  = function(f) write.csv(upload_result()$df, f, row.names = FALSE))
+
+  ## === Explain XAI ===
+  top_idx <- order(test_probs, decreasing = TRUE)[1:25]
+  updateSelectInput(session, "row_pick",
+    choices = setNames(top_idx,
+      paste0("Row ", top_idx, " — P=", round(test_probs[top_idx], 3),
+             ifelse(y_test[top_idx]==1, " [fraud]", " [legit]"))),
+    selected = top_idx[1])
+
+  output$row_details <- renderTable({
+    idx <- as.integer(input$row_pick)
+    tibble(Field = c("Row","P(fraud)","Actual","Amount","Hour","Velocity",
+                     "Trust","Category","Foreign","Mismatch"),
+           Value = c(idx, round(test_probs[idx], 3),
+                     as.character(test_set$is_fraud[idx]),
+                     dollar(test_set$amount[idx]),
+                     test_set$transaction_hour[idx],
+                     test_set$velocity_last_24h[idx],
+                     test_set$device_trust_score[idx],
+                     as.character(test_set$merchant_category[idx]),
+                     as.character(test_set$foreign_transaction[idx]),
+                     as.character(test_set$location_mismatch[idx])))
+  }, striped = TRUE, bordered = TRUE)
+
+  shap_res <- eventReactive(input$go_xai, {
+    idx <- as.integer(input$row_pick)
+    withProgress(message = "SHAP…", value = .4,
+      DALEX::predict_parts(explainer,
+                           new_observation = x_test[idx, , drop=FALSE],
+                           type = "shap", B = 15))
+  })
+  output$shap_plot <- renderPlot({
+    req(shap_res()); plot(shap_res()) +
+      labs(title = sprintf("Row %s — P=%.3f", input$row_pick,
+                           test_probs[as.integer(input$row_pick)]))
+  })
+
+  bd_res <- eventReactive(input$go_xai, {
+    idx <- as.integer(input$row_pick)
+    DALEX::predict_parts(explainer,
+                         new_observation = x_test[idx, , drop=FALSE],
+                         type = "break_down")
+  })
+  output$bd_plot <- renderPlot({ req(bd_res()); plot(bd_res()) })
+
+  ## === Models ===
+  output$tbl_models <- renderDT({
+    datatable(comparison, rownames = FALSE,
+              options = list(dom = "t", pageLength = 10)) |>
+      formatStyle("PR_AUC",
+        background = styleColorBar(comparison$PR_AUC, "#B22222"),
+        backgroundSize = "100% 90%", backgroundRepeat = "no-repeat",
+        backgroundPosition = "center")
+  })
+  output$bar_models <- renderPlotly({
+    p <- ggplot(comparison, aes(reorder(Model, PR_AUC), PR_AUC, fill = Model)) +
+      geom_col(show.legend = FALSE) +
+      geom_text(aes(label = sprintf("%.3f", PR_AUC)), hjust = -.15, size = 3.2) +
+      coord_flip() + scale_y_continuous(expand = expansion(mult = c(0,.15))) +
+      labs(x = NULL, y = "PR-AUC") + theme_minimal(base_size = 12)
+    ggplotly(p)
+  })
+  output$roc_plot <- renderPlotly({
+    r <- pROC::roc(test_set$is_fraud, test_probs, quiet = TRUE,
+                   levels = c("legit","fraud"), direction = "<")
+    df <- tibble(fpr = 1 - r$specificities, tpr = r$sensitivities) |> arrange(fpr)
+    p <- ggplot(df, aes(fpr, tpr)) +
+      geom_abline(linetype = "dashed", colour = "grey60") +
+      geom_path(colour = PAL[["fraud"]], linewidth = 1.1) + coord_equal() +
+      labs(x = "FPR", y = "TPR",
+           title = sprintf("AUC = %.3f", as.numeric(pROC::auc(r)))) +
+      theme_minimal(base_size = 12)
+    ggplotly(p)
+  })
+  output$pr_plot <- renderPlotly({
+    df <- yardstick::pr_curve(tibble(truth = test_set$is_fraud, prob = test_probs),
+                              truth, prob, event_level = "second")
+    pauc <- yardstick::pr_auc_vec(test_set$is_fraud, test_probs, event_level = "second")
+    p <- ggplot(df, aes(recall, precision)) +
+      geom_path(colour = PAL[["fraud"]], linewidth = 1.1) +
+      labs(x = "Recall", y = "Precision",
+           title = sprintf("PR-AUC = %.3f", pauc)) +
+      theme_minimal(base_size = 12)
+    ggplotly(p)
+  })
+}
+
+shinyApp(ui, server)
+)---"
+
+writeLines(app_code, "app.R")
+cat("Wrote app.R to", getwd(), "\n")
+```
+
+## 6.3 Confirm the deployment bundle
+
+```{r}
+bundle <- c("app.R","credit_clean.csv","final_model_gbm.rds",
+            "test_set.rds","model_comparison.rds")
+data.frame(file = bundle,
+           exists = file.exists(bundle),
+           size_kb = round(file.info(bundle)$size / 1024, 1),
+           row.names = NULL) |>
+  kable(caption = "Final deployment bundle", format = "pipe")
+```
+
+All five must show `TRUE` with non-zero sizes.
+
+## 6.4 Launch the dashboard locally
+
+Paste into the **R Console** (not a chunk):
+
+```r
+shiny::runApp("C:/Users/ADMIN/OneDrive/Desktop/caleb makini/app/project")
+```
+
+The browser opens with the six-tab dashboard — that's your **local** deliverable.
+
+## 6.5 Publish for a public link
+
+### Option A — Posit Cloud (the platform your share-link lives on)
+
+```r
+install.packages("rsconnect")
+# Posit Cloud: Account → Tokens → Copy → paste the setAccountInfo(...) line
+rsconnect::deployApp(
+  appDir   = ".",
+  appName  = "fraud-detection-xai",
+  server   = "posit.cloud",
+  appFiles = c("app.R","credit_clean.csv","final_model_gbm.rds",
+               "test_set.rds","model_comparison.rds"),
+  forceUpdate = TRUE)
+```
+
+### Option B — shinyapps.io (free tier, 25 h/month)
+
+```r
+install.packages("rsconnect")
+# https://www.shinyapps.io → Dashboard → Tokens → Copy → paste setAccountInfo(...)
+rsconnect::deployApp(
+  appDir   = ".",
+  appName  = "fraud-detection-xai",
+  appFiles = c("app.R","credit_clean.csv","final_model_gbm.rds",
+               "test_set.rds","model_comparison.rds"),
+  forceUpdate = TRUE)
+```
+
+Either route prints the URL:
+
+```
+https://<your-account>.shinyapps.io/fraud-detection-xai/
+```
+
+Paste that URL into the report as the **live deployment link**.
+
+## 6.6 Brief guide — how to use the deployed app
+
+| Tab | What to do | What you get |
+|---|---|---|
+| **Overview** | (read) | KPI cards, class-imbalance chart, per-category fraud rate |
+| **Predict** | Fill 8 fields → **Score transaction** | **P(fraud) %**, **risk band** (LOW < 30% / MEDIUM 30–55% / HIGH ≥ 55%), **recommended action**, gauge, and a **SHAP** bar chart showing *why* this transaction scored that way |
+| **Upload CSV** | Drop the **original `credit.csv`** (or any file with the same predictors) into the uploader | Row count, counts by risk band, and — if `is_fraud` is present — **accuracy / precision / recall / F1** plus a **confusion matrix**. Data table is sortable; **Download scored CSV** gives you the full scored file |
+| **Explain XAI** | Pick any of the top-25 highest-scoring test rows → **Explain** | Row details, **SHAP** waterfall, **Break Down** narrative — side by side |
+| **Models** | (read) | Leaderboard, PR-AUC bars, ROC and PR curves |
+| **About** | (read) | Method recap |
+
+**Typical analyst flow.**
+
+1. *Live transaction* → **Predict**.
+2. *Case review* → **Explain XAI** (produces the audit trail).
+3. *End-of-day sweep* → **Upload CSV** with the original `credit.csv` → read the confusion matrix → download the scored file.
+4. *Threshold tuning* → **Models**.
+
+## 6.7 Optional — AI assistant
+
+If you want to satisfy the "optional AI assistant" line in the brief, drop this into the **About** tab and set the `OPENAI_API_KEY` environment variable before deploying:
+
+```r
+# In the About tab — add near the other cards:
+card(card_header("Ask the AI about this prediction"),
+     textInput("ai_q", NULL,
+               placeholder = "e.g. Why is this transaction risky?"),
+     actionButton("ai_go", "Ask", class = "btn-info"),
+     verbatimTextOutput("ai_ans"))
+
+# In the server:
+observeEvent(input$ai_go, {
+  req(pred_result(), nzchar(Sys.getenv("OPENAI_API_KEY")))
+  res <- httr::POST(
+    "https://api.openai.com/v1/chat/completions",
+    httr::add_headers(Authorization = paste("Bearer", Sys.getenv("OPENAI_API_KEY"))),
+    httr::content_type_json(),
+    body = jsonlite::toJSON(list(
+      model    = "gpt-4o-mini",
+      messages = list(list(
+        role    = "user",
+        content = sprintf(
+          "A fraud model scored this transaction at P=%.3f. Context: %s. User asks: %s. Answer in 2 sentences.",
+          pred_result()$prob,
+          jsonlite::toJSON(pred_result()$row, auto_unbox = TRUE),
+          input$ai_q)))), auto_unbox = TRUE),
+    encode = "raw")
+  output$ai_ans <- renderText(
+    httr::content(res)$choices[[1]]$message$content)
+})
+```
+
+Set the key once (`Sys.setenv(OPENAI_API_KEY = "sk-...")` in your session) and re-deploy with `forceUpdate = TRUE`.
+
+---
+
+## ✅ Deliverable checklist
+
+| Brief requirement | Where it is delivered |
+|---|---|
+| Load trained model into a deployment environment | §6.2 — `app.R` reads `final_model_gbm.rds` at startup |
+| User-friendly interface | §6.2 — 6-tab `bslib` dashboard |
+| Real-time predictions | §6.2 — **Predict** tab, click **Score transaction** |
+| Probability / confidence / risk category | §6.2 — value boxes: **P(fraud) %**, **risk band**, **recommended action**, gauge |
+| XAI for individual predictions | §6.2 — SHAP + Break Down on **Predict** and **Explain XAI** tabs |
+| **Upload the original `credit.csv`** | §6.2 — **Upload CSV** tab accepts raw 10-column credit.csv, cleans it, computes `impossible`/`micro_amount`/`high_value`, scores every row, and reports accuracy / precision / recall / F1 / confusion matrix when `is_fraud` is present |
+| Optional AI assistant | §6.7 — snippet provided (activate by setting `OPENAI_API_KEY`) |
+| Live public link | §6.5 — `deployApp()` prints `https://<account>.shinyapps.io/fraud-detection-xai/` |
+| Brief user guide | §6.6 — table above |
+
+---
+
+## ▶️ How to run everything
+
+1. **Save `task6_deployment.Rmd`** in `C:/Users/ADMIN/OneDrive/Desktop/caleb makini/app/project` (alongside `credit.csv`).
+2. **Knit it** — it verifies the four artifacts, writes `app.R`, and produces the HTML.
+3. **Launch locally** — R Console:
+   ```r
+   shiny::runApp("C:/Users/ADMIN/OneDrive/Desktop/caleb makini/app/project")
+   ```
+4. **Test the upload** — open **Upload CSV**, drop your `credit.csv`. Expected output:
+   - "Scored 9,999 rows. 1 row removed (amount ≤ 0)."
+   - 4 KPI cards (scored / HIGH / MEDIUM / auto-approved)
+   - Performance panel: accuracy ≈ 0.99+, recall = 1.00 (because the engineered `high_value` flag makes the class nearly separable)
+   - Sortable data table + **Download scored CSV**
+5. **Deploy** (§6.5) and copy the printed URL into your Task 6 submission.

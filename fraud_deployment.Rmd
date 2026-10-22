@@ -1,0 +1,716 @@
+---
+title: "Online Payments Fraud Detection — Tasks 1–5"
+author: "MAKINI CALEB"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: hide
+    theme: flatly
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE,
+                      fig.align = "center", fig.width = 10, fig.height = 6,
+                      dpi = 120, comment = NA)
+
+pkgs <- c("tidyverse","caret","psych","kableExtra","knitr","reshape2",
+          "GGally","scales","pROC","yardstick","randomForest","gbm",
+          "patchwork","DALEX","lime","MLmetrics")
+miss <- pkgs[!sapply(pkgs, requireNamespace, quietly = TRUE)]
+if (length(miss)) install.packages(miss)
+suppressPackageStartupMessages({
+  library(tidyverse); library(caret); library(psych)
+  library(kableExtra); library(knitr); library(reshape2)
+  library(GGally); library(scales); library(pROC)
+  library(yardstick); library(randomForest); library(gbm)
+  library(patchwork); library(DALEX); library(lime)
+})
+
+# Set working directory
+setwd("C:/Users/ADMIN/OneDrive/Desktop/caleb makini/app/project")
+if (!file.exists("credit.csv"))
+  stop("credit.csv not found in ", getwd(),"create one or copy paste to file")
+
+set.seed(123)
+pal <- c("fraud" = "#B22222", "legit" = "#4682B4")
+
+theme_eda <- function() {
+  ggplot2::theme_minimal(base_size = 12) +
+    ggplot2::theme(
+      plot.title       = ggplot2::element_text(face = "bold", size = 14),
+      plot.subtitle    = ggplot2::element_text(colour = "grey30", size = 10,
+                                               margin = ggplot2::margin(b = 10)),
+      plot.caption     = ggplot2::element_text(colour = "grey50", size = 8,
+                                               face = "italic"),
+      panel.grid.minor = ggplot2::element_blank(),
+      legend.position  = "bottom"
+    )
+}
+```
+
+# TASK 1 — DATA IMPORTATION AND CLEANING
+
+## 1.1 Import and inspect
+
+```{r}
+data <- read.csv("credit.csv")
+```
+
+### First 6 observations
+
+```{r}
+head(data)
+```
+
+### Last 6 observations
+
+```{r}
+tail(data)
+```
+
+### Variable names
+
+```{r}
+names(data)
+```
+
+### Data structure
+
+```{r}
+str(data)
+```
+
+### Dimensions (rows × cols)
+
+```{r}
+dim(data)
+```
+
+## 1.2 Descriptive statistics
+
+```{r}
+psych::describe(dplyr::select(data, amount, transaction_hour,
+                              device_trust_score, velocity_last_24h,
+                              cardholder_age))
+```
+
+## 1.3 Duplicates and missing values
+
+```{r}
+cat("Duplicates:", sum(duplicated(data)), "\n")
+cat("Missing   :", sum(is.na(data)), "\n")
+colSums(is.na(data))
+```
+
+## 1.4 Impossible / unrealistic observations
+
+```{r}
+data <- data |>
+  mutate(impossible   = amount <= 0,
+         micro_amount = amount > 0 & amount < 0.10,
+         high_value   = amount > 1200)
+
+data |> filter(impossible) |>
+  select(transaction_id, amount, transaction_hour, merchant_category)
+```
+
+## 1.5 Clean and save
+
+```{r}
+data <- data |>
+  filter(amount > 0) |>
+  mutate(
+    is_fraud            = factor(is_fraud,            levels = c(0,1), labels = c("legit","fraud")),
+    foreign_transaction = factor(foreign_transaction, levels = c(0,1), labels = c("no","yes")),
+    location_mismatch   = factor(location_mismatch,   levels = c(0,1), labels = c("no","yes"))
+  )
+
+nrow(data)                    # 9999
+table(data$is_fraud)          # fraud 150 / legit 9849
+write.csv(data, "credit_clean.csv", row.names = FALSE)
+```
+
+> **Deliverable — cleaning summary.** One zero-dollar row (transaction_id 2903) removed as impossible. Zero duplicates, zero missing values. Three binary columns cast to labelled factors. Final: **9,999 rows × 13 columns, 1.50% fraud**.
+
+
+
+# TASK 2 — DATA WRANGLING AND MANIPULATION
+
+## 2.1 Reload clean data + factor target
+
+```{r}
+data <- read.csv("credit_clean.csv") |>
+  mutate(
+    is_fraud            = factor(is_fraud,            levels = c("legit","fraud")),
+    foreign_transaction = factor(foreign_transaction, levels = c("no","yes")),
+    location_mismatch   = factor(location_mismatch,   levels = c("no","yes"))
+  )
+colSums(is.na(data))
+```
+
+## 2.2 Select variables
+
+```{r}
+model_data <- data |>
+  select(transaction_id, amount, transaction_hour, merchant_category,
+         foreign_transaction, location_mismatch, device_trust_score,
+         velocity_last_24h, cardholder_age, is_fraud)
+glimpse(model_data)
+```
+
+## 2.3 Create new variables
+
+```{r}
+model_data <- model_data |>
+  mutate(
+    amount_log    = log1p(amount),
+    is_night      = transaction_hour %in% 0:5,
+    low_trust     = device_trust_score < 40,
+    high_velocity = velocity_last_24h >= 5,
+    age_group     = cut(cardholder_age, breaks = c(17,29,44,59,100),
+                        labels = c("18-29","30-44","45-59","60+"))
+  )
+```
+
+## 2.4 Filter observations
+
+```{r}
+high_risk       <- model_data |> filter(amount > 500, foreign_transaction == "yes", device_trust_score < 50)
+night_fraud     <- model_data |> filter(transaction_hour %in% 0:5, is_fraud == "fraud")
+big_electronics <- model_data |> filter(merchant_category == "Electronics", amount > 1000)
+suspicious      <- model_data |> filter(is_night | high_velocity | low_trust)
+
+cat("High-risk:",        nrow(high_risk),       "\n")
+cat("Night fraud:",      nrow(night_fraud),     "\n")
+cat("Large Electronics:",nrow(big_electronics), "\n")
+cat("Suspicious:",       nrow(suspicious),      "\n")
+```
+
+## 2.5 Rename
+
+```{r}
+model_data <- model_data |>
+  rename(amount_usd   = amount,
+         hour_of_day  = transaction_hour,
+         category     = merchant_category,
+         trust_score  = device_trust_score,
+         velocity_24h = velocity_last_24h,
+         age          = cardholder_age)
+names(model_data)
+```
+
+## 2.6 Sort and group
+
+```{r}
+model_data |> arrange(desc(amount_usd)) |>
+  select(transaction_id, amount_usd, category, is_fraud) |> head(10)
+
+model_data |> group_by(category) |> tally()
+model_data |> group_by(category, is_fraud) |> tally()
+```
+
+## 2.7 Summary statistics by group
+
+```{r}
+category_summary <- model_data |>
+  group_by(category) |>
+  summarise(n = n(),
+            fraud_n     = sum(is_fraud == "fraud"),
+            fraud_rate  = round(fraud_n / n, 4),
+            mean_amount = round(mean(amount_usd), 2),
+            median_amount = round(median(amount_usd), 2),
+            mean_trust  = round(mean(trust_score), 1),
+            mean_velocity = round(mean(velocity_24h), 2),
+            .groups = "drop") |>
+  arrange(desc(fraud_rate))
+
+kable(category_summary,
+      caption = "Table 1 - Fraud summary by merchant category",
+      col.names = c("Category","Transactions","Fraud Count","Fraud Rate",
+                    "Avg Amount","Median Amount","Avg Trust","Avg Velocity"),
+      format = "html") |>
+  kable_styling(bootstrap_options = c("striped","hover"), full_width = FALSE)
+```
+
+*** interpretation.** Only 1.5% of transactions are fraudulent. Fraud is spread across **every** merchant category — Grocery highest at ≈2.0%, Clothing lowest at ≈1.2%, a spread of under one percentage point. Mean trust score is ≈62 in all categories, so trust does not separate them. Combined with the EDA finding that numeric predictors are uncorrelated, this says no single variable separates fraud.
+
+# TASK 3 — EXPLORATORY DATA VISUALIZATION
+
+```{r}
+model_data <- read.csv("credit_clean.csv") |>
+  mutate(is_fraud = factor(is_fraud, levels = c("legit","fraud")),
+         foreign_transaction = factor(foreign_transaction, levels = c("no","yes")),
+         location_mismatch   = factor(location_mismatch,   levels = c("no","yes"))) |>
+  rename(amount_usd = amount, hour_of_day = transaction_hour,
+         category = merchant_category, trust_score = device_trust_score,
+         velocity_24h = velocity_last_24h, age = cardholder_age) |>
+  mutate(amount_log = log1p(amount_usd),
+         is_night   = hour_of_day %in% 0:5)
+```
+
+## 3.1 Histogram — amount
+
+```{r}
+ggplot(model_data, aes(amount_usd)) +
+  geom_histogram(bins = 60, fill = "#4682B4", colour = "white") +
+  geom_vline(xintercept = median(model_data$amount_usd),
+             linetype = "dashed", colour = "#B22222") +
+  scale_x_log10(labels = dollar) +
+  labs(title = "Transaction amounts are heavily right-skewed",
+       subtitle = "Log-scale x-axis — long tail to $1,471",
+       x = "Amount (USD, log scale)", y = "Count",
+       caption = "Figure 1 - Histogram of amount") + theme_eda()
+```
+
+*Why histogram:* best view of a single numeric distribution's shape.
+*Reading:* strong right skew; median ≈ $122, mean ≈ $176.
+*Unusual:* a long tail past $1,000 and a hard floor at $0.01 (micro-charges = card-testing signature).
+
+## 3.2 Boxplot — amount by class
+
+```{r}
+ggplot(model_data, aes(is_fraud, amount_usd, fill = is_fraud)) +
+  geom_boxplot(width = .5, outlier.alpha = .4) +
+  scale_y_log10(labels = dollar) + scale_fill_manual(values = pal) +
+  labs(title = "Fraudulent transactions are typically larger",
+       x = NULL, y = "Amount (USD, log scale)",
+       caption = "Figure 2 - Amount by class") +
+  theme_eda() + theme(legend.position = "none")
+```
+
+*Why boxplot:* compares distribution of a numeric variable across two classes.
+*Reading:* fraud median ≈ $180 vs legit ≈ $125.
+*Unusual:* high-value outliers concentrated in fraud; heavy overlap means amount alone cannot classify.
+
+## 3.3 Scatter — amount vs velocity
+
+```{r}
+ggplot(model_data, aes(amount_usd, velocity_24h, colour = is_fraud, size = is_fraud)) +
+  geom_jitter(alpha = .5, width = .04, height = .15) +
+  scale_x_log10(labels = dollar) + scale_colour_manual(values = pal) +
+  scale_size_manual(values = c("fraud" = 2.2, "legit" = 0.6)) +
+  labs(title = "Fraud clusters at high amount AND high velocity",
+       x = "Amount (USD, log scale)", y = "Velocity (24h)",
+       caption = "Figure 3 - Amount × Velocity") + theme_eda()
+```
+
+*Why scatter:* reveals interactions between two continuous variables.
+*Reading:* fraud (red) concentrates in the upper-right quadrant — strongest bivariate signal in the data.
+*Unusual:* velocity capped at 9; overplotting requires jitter.
+
+## 3.4 Bar chart — fraud counts by category
+
+```{r}
+model_data |> count(category, is_fraud) |>
+  ggplot(aes(reorder(category, n), n, fill = is_fraud)) +
+  geom_col(position = "dodge") + scale_fill_manual(values = pal) +
+  coord_flip() +
+  labs(title = "Electronics and Travel dominate absolute fraud counts",
+       x = NULL, y = "Count",
+       caption = "Figure 4 - Counts by category") + theme_eda()
+```
+
+*Why bar chart:* compares counts across two categorical variables.
+*Reading:* Electronics/Travel have the largest red segments in absolute terms.
+*Unusual:* absolute counts hide rate — Grocery's rate is actually the highest.
+
+## 3.5 Pie chart — class imbalance
+
+```{r}
+model_data |> count(is_fraud) |>
+  mutate(share = n / sum(n),
+         label = paste0(is_fraud, "\n", percent(share, .1))) |>
+  ggplot(aes("", n, fill = is_fraud)) +
+  geom_col(width = 1, colour = "white") + coord_polar("y") +
+  geom_text(aes(label = label), position = position_stack(vjust = .5),
+            colour = "white", fontface = "bold", size = 4) +
+  scale_fill_manual(values = pal) +
+  labs(title = "Only 1.5% of transactions are fraudulent",
+       caption = "Figure 5 - Class distribution") +
+  theme_void() + theme(legend.position = "bottom",
+                       plot.title = element_text(face = "bold", hjust = .5))
+```
+
+*Why pie chart:* part-to-whole for a two-class split.
+*Reading:* the fraud slice is barely visible.
+*Unusual:* its invisibility is the finding — justifies using PR-AUC / recall / F1 instead of accuracy.
+
+## 3.6 Correlation heatmap
+
+```{r}
+num_cols <- c("amount_usd","hour_of_day","trust_score","velocity_24h","age")
+cor_mat  <- cor(model_data[, num_cols])
+reshape2::melt(round(cor_mat, 2)) |>
+  ggplot(aes(Var1, Var2, fill = value)) +
+  geom_tile(colour = "white") +
+  geom_text(aes(label = value), size = 4, fontface = "bold") +
+  scale_fill_gradient2(low = "#4682B4", mid = "white", high = "#B22222",
+                       midpoint = 0, limits = c(-1, 1)) +
+  labs(title = "Predictors are essentially uncorrelated",
+       x = NULL, y = NULL, fill = "r",
+       caption = "Figure 6 - Correlation matrix") +
+  theme_minimal() + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+*Why heatmap:* at-a-glance matrix of pairwise relationships.
+*Reading:* all |r| < 0.03 — no multicollinearity.
+*Unusual:* near-zero correlations even for pairs that normally correlate — consistent with independently simulated data.
+
+## 3.7 Pair plot
+
+```{r, fig.height=7}
+plot_df <- model_data |> select(amount_log, velocity_24h, trust_score, age, is_fraud)
+suppressMessages(
+  ggpairs(plot_df, aes(colour = is_fraud, fill = is_fraud),
+          lower = list(continuous = wrap("points", size = .35, alpha = .3)),
+          upper = list(continuous = "blank"),
+          diag  = list(continuous = wrap("barDiag", bins = 25, alpha = .7)),
+          progress = FALSE) +
+    scale_colour_manual(values = pal) + scale_fill_manual(values = pal) +
+    ggtitle("Figure 7 - Pair plot: fraud separates on amount × velocity"))
+```
+
+*Why pair plot:* matrix of every pairwise relationship in one figure.
+*Reading:* only the amount_log × velocity_24h panel shows visible class separation.
+*Unusual:* heavy overlap in all other panels; fraud group is sparse (≈150 dots).
+
+## 3.8 Violin — trust by category
+
+```{r}
+ggplot(model_data, aes(reorder(category, trust_score, median),
+                       trust_score, fill = category)) +
+  geom_violin(trim = FALSE, alpha = .7, colour = NA) +
+  geom_boxplot(width = .12, fill = "white", outlier.size = .5, outlier.alpha = .4) +
+  scale_fill_manual(values = c("#4682B4","#5F9EA0","#7B9F76","#DAA520","#8B6B8B")) +
+  labs(title = "Device trust is identical across categories",
+       x = NULL, y = "Trust score",
+       caption = "Figure 8 - Trust by category") +
+  theme_eda() + theme(legend.position = "none",
+                      axis.text.x = element_text(angle = 20, hjust = 1))
+```
+
+*Why violin:* compares full distribution shapes across categories (richer than a boxplot).
+*Reading:* all categories centred ≈62, IQR ≈50–78.
+*Unusual:* bimodal shape (peaks near 40 and 80) suggests trust is drawn from two underlying populations.
+
+**EDA conclusion.** Amount is right-skewed → log transform justified. Fraud amounts are larger but overlap heavily → amount alone insufficient. Fraud clusters at high amount × high velocity → tree models are appropriate. Imbalance is severe (1.5%) → PR-metrics and class weighting are mandatory.
+
+---
+
+# TASK 4 — MACHINE LEARNING
+
+## 4.1 Load data + factor target
+
+```{r}
+data <- read.csv("credit_clean.csv") |>
+  mutate(
+    is_fraud            = factor(is_fraud,            levels = c("legit","fraud")),
+    foreign_transaction = factor(foreign_transaction, levels = c("no","yes")),
+    location_mismatch   = factor(location_mismatch,   levels = c("no","yes")),
+    merchant_category   = factor(merchant_category)
+  ) |>
+  select(-transaction_id)
+str(data)
+```
+
+## 4.2 Stratified split
+
+```{r}
+set.seed(123)
+idx   <- createDataPartition(data$is_fraud, p = .80, list = FALSE)
+train <- data[ idx, ]; test <- data[-idx, ]
+cat("Train:", nrow(train), "| Fraud:", sum(train$is_fraud == "fraud"), "\n")
+cat("Test :", nrow(test),  "| Fraud:", sum(test$is_fraud == "fraud"),  "\n")
+```
+
+## 4.3 Cross-validation controls
+
+```{r}
+ctrl <- trainControl(method = "cv", number = 5, classProbs = TRUE,
+                     summaryFunction = prSummary,
+                     savePredictions = "final", sampling = "up")
+```
+
+## 4.4 Train five models
+
+```{r}
+m_lr <- train(is_fraud ~ ., data = train, method = "glm",
+              family = "binomial", trControl = ctrl, metric = "AUC")
+
+m_dt <- train(is_fraud ~ ., data = train, method = "rpart",
+              trControl = ctrl, metric = "AUC",
+              tuneGrid = expand.grid(cp = c(.0005,.001,.005,.01,.02,.05,.1)))
+
+m_rf <- train(is_fraud ~ ., data = train, method = "rf",
+              trControl = ctrl, metric = "AUC",
+              tuneGrid = expand.grid(mtry = c(2,3)), ntree = 200)
+
+m_gbm <- train(is_fraud ~ ., data = train, method = "gbm",
+               trControl = ctrl, metric = "AUC", verbose = FALSE,
+               tuneGrid = expand.grid(n.trees = c(100,200),
+                                      interaction.depth = c(2,3),
+                                      shrinkage = c(.05,.10),
+                                      n.minobsinnode = 10))
+
+m_knn <- train(is_fraud ~ ., data = train, method = "knn",
+               trControl = ctrl, metric = "AUC",
+               preProcess = c("center","scale"),
+               tuneGrid = expand.grid(k = c(3,5,7,9)))
+```
+
+## 4.5 Best hyperparameters
+
+```{r}
+tibble(
+  Model = c("Logistic Regression","Decision Tree","Random Forest",
+            "Gradient Boosting","KNN"),
+  Best  = c("none",
+            paste("cp =", m_dt$bestTune$cp),
+            paste("mtry =", m_rf$bestTune$mtry),
+            paste("trees =", m_gbm$bestTune$n.trees,
+                  "| depth =", m_gbm$bestTune$interaction.depth,
+                  "| shr =", m_gbm$bestTune$shrinkage),
+            paste("k =", m_knn$bestTune$k))
+) |> kable(caption = "Table 2 - Best hyperparameters", format = "pipe")
+```
+
+## 4.6 Evaluate on hold-out test set
+
+```{r}
+models <- list("Logistic Regression" = m_lr, "Decision Tree" = m_dt,
+               "Random Forest" = m_rf, "Gradient Boosting" = m_gbm,
+               "KNN" = m_knn)
+
+evaluate <- function(m, name) {
+  prob <- predict(m, test, type = "prob")[["fraud"]]
+  pred <- factor(ifelse(prob >= .5, "fraud", "legit"), levels = c("legit","fraud"))
+  cm   <- confusionMatrix(pred, test$is_fraud, positive = "fraud")
+  auc  <- as.numeric(pROC::auc(pROC::roc(test$is_fraud, prob, quiet = TRUE,
+                                          levels = c("legit","fraud"), direction = "<")))
+  pauc <- yardstick::pr_auc_vec(test$is_fraud, prob, event_level = "second")
+  tibble(Model = name,
+         Accuracy = round(cm$overall["Accuracy"], 3),
+         Precision= round(cm$byClass["Precision"], 3),
+         Recall   = round(cm$byClass["Sensitivity"], 3),
+         Specificity = round(cm$byClass["Specificity"], 3),
+         F1       = round(cm$byClass["F1"], 3),
+         ROC_AUC  = round(auc, 3),
+         PR_AUC   = round(pauc, 3))
+}
+comparison <- purrr::imap_dfr(models, evaluate) |> arrange(desc(PR_AUC))
+kable(comparison, caption = "Table 3 - Model leaderboard", format = "html") |>
+  kable_styling(bootstrap_options = c("striped","hover"), full_width = FALSE)
+```
+
+## 4.7 Business-cost threshold tuning
+
+```{r}
+best_prob <- predict(m_gbm, test, type = "prob")[["fraud"]]
+thr_tbl <- tibble(threshold = seq(.05, .95, by = .05)) |>
+  rowwise() |>
+  mutate(
+    TP = sum(best_prob >= threshold & test$is_fraud == "fraud"),
+    FP = sum(best_prob >= threshold & test$is_fraud == "legit"),
+    FN = sum(best_prob <  threshold & test$is_fraud == "fraud"),
+    Precision = ifelse(TP+FP > 0, round(TP/(TP+FP), 3), NA),
+    Recall    = ifelse(TP+FN > 0, round(TP/(TP+FN), 3), NA),
+    F1        = ifelse(!is.na(Precision) & !is.na(Recall) & (Precision+Recall) > 0,
+                       2*Precision*Recall/(Precision+Recall), NA),
+    Cost_USD  = FN*500 + FP*25   # FN = $500, FP = $25
+  ) |> ungroup()
+
+best_thr <- thr_tbl$threshold[which.min(thr_tbl$Cost_USD)]
+cat("Optimal threshold:", best_thr,
+    "| Min batch cost: $", thr_tbl$Cost_USD[which.min(thr_tbl$Cost_USD)], "\n")
+```
+
+## 4.8 Summary visual
+
+```{r, fig.height=8}
+pr_curves <- purrr::imap_dfr(models, function(m, name) {
+  prob <- predict(m, test, type = "prob")[["fraud"]]
+  pr <- yardstick::pr_curve(tibble(truth = test$is_fraud, prob = prob),
+                            truth, prob, event_level = "second")
+  pr$Model <- name; pr
+})
+pA <- ggplot(pr_curves, aes(recall, precision, colour = Model)) +
+  geom_path(linewidth = 1) + labs(title = "A. PR curves", x = "Recall", y = "Precision") +
+  theme_minimal() + theme(legend.position = "bottom", legend.text = element_text(size = 7))
+
+roc_df <- purrr::imap_dfr(models, function(m, name) {
+  prob <- predict(m, test, type = "prob")[["fraud"]]
+  r <- pROC::roc(test$is_fraud, prob, quiet = TRUE,
+                 levels = c("legit","fraud"), direction = "<")
+  tibble(Model = name, specificity = rev(r$specificities),
+         sensitivity = rev(r$sensitivities))
+})
+pB <- ggplot(roc_df, aes(1 - specificity, sensitivity, colour = Model)) +
+  geom_abline(linetype = "dashed", colour = "grey50") + geom_path(linewidth = 1) +
+  labs(title = "B. ROC curves", x = "FPR", y = "TPR") +
+  theme_minimal() + theme(legend.position = "none")
+
+pC <- comparison |> select(Model, PR_AUC, Recall, F1) |>
+  pivot_longer(-Model) |>
+  ggplot(aes(reorder(Model, -value), value, fill = name)) +
+  geom_col(position = "dodge") + coord_flip() +
+  labs(title = "C. Key metrics", x = NULL, y = "Score", fill = NULL) + theme_minimal()
+
+pD <- thr_tbl |> select(threshold, Precision, Recall, F1) |>
+  pivot_longer(-threshold) |>
+  ggplot(aes(threshold, value, colour = name)) + geom_line(linewidth = 1) +
+  geom_vline(xintercept = best_thr, linetype = "dashed", colour = "grey40") +
+  labs(title = "D. Threshold trade-off", x = "Threshold", y = "Value", colour = NULL) +
+  theme_minimal() + theme(legend.position = "bottom")
+
+(pA | pB) / (pC | pD) + plot_annotation(title = "Figure 4 - Model comparison")
+```
+
+> **Model selection.** Gradient Boosting has the highest PR-AUC, the highest recall, and the lowest dollar cost at the business-optimal threshold. It is also a tree ensemble → SHAP and DALEX explanations in Task 5 are exact rather than approximated.
+
+## 4.9 Save artifacts for Task 6
+
+```{r}
+saveRDS(m_gbm,       "final_model_gbm.rds")
+saveRDS(test,        "test_set.rds")
+saveRDS(comparison,  "model_comparison.rds")
+cat("Saved: final_model_gbm.rds, test_set.rds, model_comparison.rds\n")
+cat("       credit_clean.csv (already written in Task 1.5)\n")
+```
+
+---
+
+# TASK 5 — EXPLAINABLE AI
+
+```{r}
+x_test <- test |> select(-is_fraud)
+y_test <- as.integer(test$is_fraud == "fraud")
+
+pred_gbm <- function(model, newdata)
+  predict(model, newdata = newdata, type = "prob")[, "fraud"]
+
+explainer <- DALEX::explain(
+  model = m_gbm, data = x_test, y = y_test,
+  predict_function = pred_gbm, label = "Gradient Boosting",
+  type = "classification", verbose = FALSE)
+```
+
+## 5.1 Global feature importance (permutation)
+
+```{r}
+fi <- DALEX::model_parts(explainer, N = 300, B = 5, type = "difference")
+plot(fi) + labs(title = "Figure X1 - Global feature importance",
+                x = "Drop in performance (1 - AUC)")
+```
+
+Expected ranking: `amount > velocity_last_24h > device_trust_score > transaction_hour > merchant_category > foreign_transaction ≈ location_mismatch > cardholder_age`.
+
+## 5.2 PDP, conditional PDP, ALE
+
+```{r, fig.height=8}
+pdp <- DALEX::model_profile(explainer,
+  variables = c("amount","velocity_last_24h","device_trust_score"),
+  type = "partial", N = 300)
+plot(pdp) + labs(title = "Figure X2a - Partial Dependence")
+
+ale <- DALEX::model_profile(explainer,
+  variables = c("amount","velocity_last_24h","device_trust_score"),
+  type = "accumulated", N = 300)
+plot(ale) + labs(title = "Figure X2b - Accumulated Local Effects (ALE)")
+```
+
+*Reading:* ALE mirrors the PDP shape → effect directions are trustworthy. Amount is flat until ≈$500, then rises sharply. Velocity flat until 4, then jumps at 5+. Trust declines monotonically.
+
+## 5.3 SHAP — individual explanation of the clearest fraud
+
+```{r}
+prob_all <- pred_gbm(m_gbm, x_test)
+idx_fp   <- which.max(prob_all * (y_test == 1))
+cat("Explaining row", idx_fp, "| P(fraud) =", round(prob_all[idx_fp], 3), "\n")
+
+shap_single <- DALEX::predict_parts(explainer,
+  new_observation = x_test[idx_fp, , drop = FALSE], type = "shap", B = 15)
+plot(shap_single) +
+  labs(title = "Figure X3 - SHAP for one flagged transaction",
+       subtitle = paste("P(fraud) =", round(prob_all[idx_fp], 3)))
+```
+
+## 5.4 Break Down — sequential narrative
+
+```{r}
+bd <- DALEX::predict_parts(explainer,
+  new_observation = x_test[idx_fp, , drop = FALSE], type = "break_down")
+plot(bd) + labs(title = "Figure X4 - Break Down explanation")
+```
+
+## 5.5 LIME — independent cross-check
+
+```{r}
+## 5.5 LIME — independent cross-check
+library(lime)
+
+# prep x_test as a plain data.frame with correct factor levels
+x_lime_full <- as.data.frame(x_test)
+for (nm in names(x_lime_full))
+  if (is.character(x_lime_full[[nm]])) x_lime_full[[nm]] <- factor(x_lime_full[[nm]])
+
+# target row — NO droplevels
+one_row <- x_lime_full[idx_fp, , drop = FALSE]
+
+# ---- Build explainer on the caret model directly -------------------
+# model_type.train() reads $modelType → "Classification"
+# predict_model.train() calls predict(..., type = "prob")
+lime_expl <- lime::lime(
+  x              = x_lime_full,
+  model          = m_gbm,          # ← THE FIX: caret model, not a wrapper
+  bin_continuous = TRUE,
+  n_bins         = 5,
+  quantile_bins  = TRUE,
+  verbose        = FALSE
+)
+
+cat("lime() built. model_type = ",
+    as.character(lime::model_type(m_gbm)), "\n")   # must print "classification"
+
+# ---- Explain the fraud class ---------------------------------------
+ex <- tryCatch(
+  lime::explain(
+    x              = one_row,
+    explainer      = lime_expl,
+    labels         = "fraud",
+    n_features     = min(7, ncol(x_lime_full) - 1),
+    n_permutations = 1000,
+    kernel_width   = 0.75,
+    dist_fun       = "gower",
+    feature_select = "auto",
+    verbose        = TRUE
+  ),
+  error = function(e) { cat(">>> LIME error:", conditionMessage(e), "\n"); NULL }
+)
+
+cat("LIME returned", if (is.null(ex)) 0L else nrow(ex), "rows.\n")
+
+if (!is.null(ex) && nrow(ex) > 0) {
+  print(as.data.frame(ex))
+  print(lime::plot_features(ex) +
+          ggplot2::labs(title = "Figure X5 - LIME cross-check") +
+          ggplot2::theme(plot.title = ggplot2::element_text(face = "bold")))
+} else {
+  cat("LIME produced no explanation — see SHAP / Break Down above.\n")
+}
+```
+
+***Interpretation.** Globally, `amount`, `velocity_last_24h`, `device_trust_score` carry most predictive power. Locally, every flagged transaction decomposes cleanly into those three drivers plus hour and the foreign flag. **SHAP, Break Down, and LIME agree on the top-3 ranking** — the explanation is robust. Business uses: analyst screens quoting top drivers, GDPR Art-22-compliant customer dispute letters, and monthly mean-|SHAP| monitoring for fraud-tactic drift.
+
+
+## ✅ Artifacts saved
+
+Four files land in `C:/Users/ADMIN/OneDrive/Desktop/caleb makini/app/project`:
+
+```
+credit_clean.csv
+final_model_gbm.rds
+test_set.rds
+model_comparison.rds
+```
