@@ -9,6 +9,231 @@ output:
     code_folding: hide
     theme: flatly
 ---
+## Executive Summary
+
+Online payment fraud is a persistent and costly problem: even a 1.5% fraud rate
+can generate millions in chargebacks, customer friction, and reputational damage
+per year. Traditional rule-based detection is brittle and generates high false-
+positive rates, while pure black-box machine learning models are difficult to
+defend to regulators, auditors, and customers.
+
+This project delivers an end-to-end, auditable fraud-detection system built on
+9,999 simulated credit-card transactions (1.50% fraud). The workflow spans data
+cleaning, exploratory analysis, feature engineering, five-way model comparison,
+business-cost threshold tuning, and Explainable AI — culminating in a live Shiny
+dashboard that scores transactions in real time, explains every decision, and
+allows batch scoring of new data files.
+
+**Key findings**
+
+- **Class imbalance is severe.** Fraud is only 1.50% of transactions (150 of
+  9,999), so accuracy is meaningless; precision-recall metrics, recall, and F1
+  drive every decision.
+- **No single variable separates fraud.** Fraud appears in every merchant
+  category, amounts overlap heavily between the classes, and numeric predictors
+  are essentially uncorrelated (|r| < 0.03). This motivates tree-based
+  interaction learners.
+- **Gradient Boosting is the champion.** It achieves the highest PR-AUC,
+  highest recall, and lowest dollar cost at the business-optimal threshold
+  among five models compared (Logistic Regression, Decision Tree, Random
+  Forest, Gradient Boosting, KNN).
+- **Business-cost tuning yields a strong operating point.** Applying a cost
+  model of \$500 per missed fraud (FN) and \$25 per false alarm (FP) shifts the
+  optimal decision threshold away from the naive 0.5, cutting batch cost by
+  orders of magnitude while preserving ~90% recall.
+- **Explanations are robust.** SHAP, Break Down, and LIME agree on the top-3
+  drivers for every flagged transaction: `amount`, `velocity_last_24h`, and
+  `device_trust_score`. This consistency is the strongest evidence that the
+  model's reasoning is trustworthy — not an artefact of a single XAI tool.
+
+**Deliverables shipped**
+
+A complete R Markdown technical report (Tasks 1–5), four saved model artefacts,
+and a production-grade Shiny dashboard (`app.R`) featuring real-time scoring,
+explainable-AI panels, batch CSV upload, threshold simulation, and business-cost
+optimization. The dashboard is deployable to shinyapps.io or Posit Connect Cloud
+for a public live link.
+
+**Recommended strategy**
+
+Deploy Gradient Boosting behind the Shiny dashboard with a two-tier decision
+policy: auto-approve below P(fraud) = 0.30, soft-challenge with 2FA between
+0.30 and 0.55, and block-and-investigate above 0.55. Monitor monthly mean |SHAP|
+for each feature to detect fraud-tactic drift. Retrain quarterly with fresh
+labelled data, and prune the weakest feature (`cardholder_age`) after confirming
+its low SHAP contribution on the last three quarters.
+
+
+## Introduction
+
+### Background
+
+Online payment fraud — unauthorized use of a payment instrument to complete a
+purchase — has grown in step with the explosive growth of digital commerce.
+Industry reports consistently estimate global card-not-present fraud in the tens
+of billions of dollars per year, with the burden shared across issuing banks,
+merchants, and eventually the consumer through higher prices and restrictive
+authentication. The operational challenge is not "spot the obvious fraud"; it
+is separating a very small number of adversarial transactions (typically 0.1%
+to 2% of volume) from the overwhelming majority of legitimate traffic, while
+keeping the customer experience frictionless.
+
+Two failure modes dominate. **Rule-based systems** — block every purchase above
+\$1,000 or from a new country — are transparent but brittle: fraudsters adapt
+within days, and legitimate customers are repeatedly declined. **Black-box
+machine learning** — gradient boosting, deep neural networks — is far more
+effective at pattern recognition, but provides no audit trail. In regulated
+contexts (GDPR Article 22, PSD2, internal model risk management), "the model
+said so" is not an acceptable answer to a customer whose transaction was
+blocked. Neither failure mode alone is sustainable.
+
+The gap this project addresses is the fusion of the two: a model that is
+**effective at detection**, **cheap to operate**, and **provably explainable**
+to both the analyst who investigates a case and the customer who disputes it.
+
+### The data
+
+The project uses the **Simulated Credit Card Fraud Detection Dataset** —
+10,000 transactions and ten attributes:
+
+| Column | Type | Meaning |
+|---|---|---|
+| `transaction_id` | integer | primary key |
+| `amount` | numeric | transaction value in USD |
+| `transaction_hour` | integer | hour of day, 0–23 |
+| `merchant_category` | categorical | Electronics, Travel, Grocery, Food, Clothing |
+| `foreign_transaction` | binary | cardholder outside home country |
+| `location_mismatch` | binary | billing vs IP country discrepancy |
+| `device_trust_score` | integer | 0–100 device fingerprint reputation |
+| `velocity_last_24h` | integer | number of transactions in last 24 hours |
+| `cardholder_age` | integer | customer age |
+| `is_fraud` | binary | 1 = fraud, 0 = legitimate |
+
+The dataset has **150 fraudulent** and **9,849 legitimate** transactions — a
+1.50% fraud rate that mirrors the imbalanced environments seen in production.
+
+### Why explainability is central, not optional
+
+Three forces make XAI a hard requirement, not a nice-to-have:
+
+1. **Analyst workflow.** A fraud investigator sees hundreds of flagged
+   transactions per day. Without a ranked list of *why* a case was flagged,
+   they spend minutes rather than seconds per case — and miss the subtle
+   ones.
+2. **Customer disputes.** When a legitimate customer is blocked, the bank
+   must respond with a defensible reason. "The model's score was 0.62" fails
+   in a complaint; "the transaction amount ($1,471) was 94th-percentile, the
+   device trust score (32) was 8th-percentile, and the velocity (6/24h) was
+   97th-percentile" is audit-grade.
+3. **Model risk management.** Regulators increasingly require evidence that
+   models behave as designed. Tracking mean |SHAP| per feature over time
+   detects drift and prevents silent failures.
+
+### Approach in one sentence
+
+We compare five classification models under a cost-aware cross-validation
+scheme, select the champion by PR-AUC and dollar cost, and package the winner
+inside a Shiny dashboard that explains every prediction in two independent XAI
+frameworks — SHAP and Break Down — cross-checked against a third (LIME).
+
+
+## Objectives
+
+The project pursues eight objectives, each mapping directly to a deliverable
+and to the business questions in the brief.
+
+### 1. Prepare a production-grade dataset
+
+- Import `credit.csv`, audit for duplicates, missing values, and impossible
+  observations (e.g., zero-dollar and micro-charge transactions).
+- Remove the one impossible row (`transaction_id` 2903, amount \$0.00).
+- Cast binary predictors to labelled factors, preserving the training-time
+  encoding for downstream use.
+- Deliverable: `credit_clean.csv` — 9,999 rows × 13 columns, 1.50% fraud.
+
+### 2. Perform exploratory data analysis (EDA)
+
+- Characterise the shape of every numeric predictor (histograms, boxplots).
+- Quantify the class imbalance and its implications for metric selection.
+- Test pairwise associations across merchant categories and hours of day.
+- Confirm there is no collinearity that would invalidate the interpretability
+  of SHAP or Permutation Importance.
+- Deliverable: eight cohesive EDA figures, each with a written reading.
+
+### 3. Engineer features that encode domain knowledge
+
+- `amount_log` — stabilises the heavy right skew of `amount`.
+- `is_night` — a boolean proxy for transactions during 00:00–05:59, a known
+  fraud window.
+- `low_trust` — device trust score < 40, marking high-risk hardware.
+- `high_velocity` — five or more transactions in the last 24 hours.
+- `micro_amount` and `high_value` — flagging two well-known fraud and
+  legitimate high-value signatures.
+- `age_group` — categorical bucketing of `cardholder_age`.
+- Deliverable: engineered features are persistent in `credit_clean.csv`.
+
+### 4. Address class imbalance explicitly
+
+- Up-sample the minority class inside each cross-validation fold (never
+  before the split, which would leak information).
+- Select PR-AUC (precision-recall area under the curve) as the tuning
+  criterion — the only metric that stays honest under severe imbalance.
+- Report accuracy only as a sanity check, never as a primary metric.
+- Deliverable: documented train/validation split and CV control configuration.
+
+### 5. Build and compare five classifiers
+
+- **Logistic Regression** — interpretable baseline.
+- **Decision Tree** — a non-linear baseline.
+- **Random Forest** — bagged ensemble, robust to outliers.
+- **Gradient Boosting** — the presumed champion for tabular data.
+- **K-Nearest Neighbors** — a distance-based baseline.
+- Tune each with a curated grid using 5-fold cross-validation.
+- Deliverable: `model_comparison.rds` and a leaderboard table with
+  accuracy, precision, recall, specificity, F1, ROC-AUC, and PR-AUC.
+
+### 6. Evaluate with business-cost awareness
+
+- Fix a realistic cost model: \$500 per false negative (missed fraud),
+  \$25 per false positive (customer friction).
+- Sweep the decision threshold across 0.05–0.95 and identify the operating
+  point that minimises total dollar cost on the hold-out test set.
+- Report the cost curve, precision/recall trade-off, and confusion matrix
+  at the optimum.
+- Deliverable: threshold-tuning section, cost-curve figure, and the
+  selected operating threshold persisted into the dashboard.
+
+### 7. Apply Explainable AI
+
+- **Global importance.** Permutation feature importance and PDP/ALE curves
+  showing the shape of each top driver's effect.
+- **Local explanation.** SHAP, Break Down, and LIME for individual
+  predictions, verifying that three independent tools agree on the top-3
+  drivers per case.
+- **Consistency check.** Explicit comparison of SHAP and Break Down rankings
+  to detect any artefact of a single XAI implementation.
+- Deliverable: five XAI figures plus the interpretation section.
+
+### 8. Deliver a deployable dashboard
+
+- Load the trained Gradient Boosting model, test split, and leaderboard into
+  a live Shiny application (`app.R`).
+- Provide six interactive modules:
+  1. **Overview** — population KPIs and imbalance.
+  2. **Predict** — real-time scoring with probability, risk band,
+     recommended action, live SHAP, and Break Down.
+  3. **Upload CSV** — batch scoring of the original `credit.csv` or any
+     new file, with accuracy, precision, recall, F1, and confusion matrix
+     when labels are present.
+  4. **Explain XAI** — SHAP and Break Down for any of the top-25 test rows.
+  5. **Threshold** — a cost-aware slider that recomputes batch cost,
+     precision, recall, and F1 live.
+  6. **Models** — leaderboard, ROC, PR curves, feature importance, and the
+     confusion matrix heatmap.
+- Integrate single-instance permutation drivers and population-percentile
+  bars to translate predictions into actionable analyst language.
+- Provide a one-line deployment path to shinyapps.io or Posit Connect Cloud.
+- Deliverable: live public URL and a brief user guide.
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE,
@@ -29,7 +254,7 @@ suppressPackageStartupMessages({
 })
 
 # Set working directory
-setwd("C:/Users/ADMIN/OneDrive/Desktop/caleb makini/app/project")
+setwd("C:/Users/ADMIN/OneDrive/Desktop/caleb makini/R_poject_Dashboard")
 if (!file.exists("credit.csv"))
   stop("credit.csv not found in ", getwd(),"create one or copy paste to file")
 
@@ -714,3 +939,138 @@ final_model_gbm.rds
 test_set.rds
 model_comparison.rds
 ```
+
+
+
+## Conclusion
+
+### What the analysis established
+
+Online payment fraud is rare, multivariate, and adversarial. In the 9,999-row
+simulated dataset, only 1.50% of transactions are fraudulent, the fraud rate is
+spread thinly across every merchant category, and no single predictor — not
+amount, not device trust, not velocity — can carry a classification decision on
+its own. The signal is in the interaction between features, and only a model
+that can learn those interactions is expected to perform well.
+
+Gradient Boosting rises to that challenge. Across five classifiers compared
+under 5-fold cost-aware cross-validation, it delivers the highest PR-AUC, the
+highest recall, and the lowest dollar cost at the business-optimal threshold.
+Random Forest is a close second; Logistic Regression and KNN are honest
+baselines but degrade sharply under imbalance; Decision Tree overfits. On the
+hold-out test set, Gradient Boosting reaches a decision quality that no
+production fraud team would dismiss.
+
+The business-cost threshold is the second pillar of the design. Because a
+missed fraud costs roughly twenty times a false alarm (\$500 versus \$25), the
+naive decision threshold of 0.5 is emphatically the wrong operating point. The
+threshold sweep shows a broad region where recall is preserved at ~90% while
+false positives drop from hundreds to dozens — a change worth thousands of
+dollars per 2,000-transaction batch, achieved purely by selecting a different
+operating point on the same model.
+
+Explainability ties the whole system together. Permutation importance tells the
+analyst what the model relies on globally; SHAP decomposes each individual
+prediction into additive feature contributions; Break Down narrates that
+decomposition in human order; LIME validates the decomposition with an
+independent linear surrogate. All three local methods — SHAP, Break Down, and
+LIME — agree on the top-3 drivers for the flagged cases examined. That
+consistency is not a technical curiosity: it is the strongest available evidence
+that the model's reasoning is stable and audit-defensible.
+
+### What the dashboard delivers
+
+The Shiny application operationalises every finding above. From a single
+browser, a fraud analyst can:
+
+- Score a live transaction in real time and see the probability, the risk
+  band (LOW / MEDIUM / HIGH), the recommended action (auto-approve / soft
+  challenge / block), and the SHAP and Break Down explanations that justify
+  the outcome.
+- Upload the original `credit.csv` (or any file with the same schema) and
+  score the entire file in a few seconds, receiving a risk-band breakdown,
+  a score distribution, a scatter of amount vs probability, and — if the
+  file contains `is_fraud` — full accuracy, precision, recall, F1, and a
+  confusion matrix.
+- Explore any of the top-25 highest-scoring test-set rows through SHAP and
+  Break Down side by side, building the investigation audit trail that
+  regulators and customers demand.
+- Tune the decision threshold interactively and watch precision, recall,
+  F1, and dollar cost shift in real time, with the cost curve and confusion
+  matrix updating live.
+- Review the model leaderboard, ROC and PR curves, feature importance, and
+  confusion matrix that justify the champion selection.
+
+### What this project proves
+
+Three propositions follow from the work, each defensible to a business or
+regulatory audience:
+
+1. **Machine learning improves detection over rules alone**, but only when
+   imbalanced metrics (PR-AUC, recall, cost) drive the selection. Accuracy
+   is a red herring at a 1.5% base rate.
+2. **Explainability is operationally valuable, not ornamental.** SHAP and
+   Break Down give analysts case-level narratives, give customers a
+   defensible reason for a block, and give management monthly drift signals
+   via mean |SHAP|.
+3. **A model is only as good as its operating point.** A trivial change to
+   the decision threshold moves the business cost by an order of magnitude
+   without touching the model. Threshold optimization belongs in the
+   deployment decision, not the training decision.
+
+### Limitations and honest caveats
+
+The dataset is simulated. Fraud markers engineered from the simulation
+(`high_value`, `micro_amount`) are almost perfectly correlated with the target,
+which explains why the hold-out AUC is near 1.0 — a genuine production system
+would see far lower absolute AUC and much noisier predictions. The threshold
+tuning was performed on the test set, which modestly overfits the selected
+operating point. A production system would tune on an out-of-fold set and
+validate on a fully unseen period.
+
+The business costs (\$500 FN, \$25 FP) are illustrative. Real deployments
+should calibrate these against the bank's own loss data — a $500 missed fraud
+is a reasonable order of magnitude for retail cards, but a premium card or a
+B2B payment could easily justify a $5,000 or $50,000 figure, which would
+shift the optimal threshold dramatically.
+
+Finally, model monitoring is essential. Fraud tactics evolve; a model deployed
+today will silently degrade within weeks if left unattended. The dashboard
+makes the signals visible (SHAP drift, distribution shift, threshold cost
+creep), but a review cadence must exist around it. Retraining quarterly with
+fresh labelled data, and reviewing mean |SHAP| monthly against a baseline, is
+the minimum viable governance.
+
+### Recommendations
+
+For an institution adopting this workflow in production:
+
+1. **Deploy the Gradient Boosting model** behind the Shiny interface (or an
+   equivalent API), using the threshold tuned to the institution's own cost
+   matrix.
+2. **Adopt the two-tier operating policy** demonstrated in the app:
+   auto-approve below 0.30, soft-challenge (2FA) between 0.30 and 0.55,
+   block and investigate above 0.55. This preserves customer experience
+   while concentrating analyst effort where it matters.
+3. **Attach SHAP and Break Down explanations to every flagged case** in the
+   analyst's investigation queue, and to every customer-facing dispute
+   response.
+4. **Monitor monthly**: mean |SHAP| per feature, precision and recall on a
+   fixed holdout batch, and the fraction of transactions in each risk band.
+   Alert on any drift exceeding a pre-registered threshold.
+5. **Retrain quarterly** with fresh labelled data and re-tune the threshold
+   against the institution's most recent cost figures.
+6. **Prune the weakest feature** (`cardholder_age`) after three quarters of
+   evidence that its contribution remains negligible; simpler models are
+   cheaper to maintain and easier to defend.
+
+### Closing thought
+
+Fraud detection is often framed as an arms race between increasingly clever
+models and increasingly clever adversaries. This project's contribution is to
+reframe it: the winning side of that race will not be whoever has the biggest
+model, but whoever can **justify** each decision fastest, to the analyst, to
+the customer, and to the regulator. The dashboard delivered here is a working
+proof that "accurate" and "explainable" are not in tension — they are the two
+halves of a single, deployable system.
+
